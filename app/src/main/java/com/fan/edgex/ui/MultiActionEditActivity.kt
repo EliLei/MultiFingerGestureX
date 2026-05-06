@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -104,6 +105,14 @@ class MultiActionEditActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btn_back).setOnClickListener { handleBack() }
         findViewById<View>(R.id.btn_save).setOnClickListener { saveAndShowToast() }
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBack()
+                }
+            },
+        )
 
         val fab = findViewById<View>(R.id.btn_fab)
         fab.setOnClickListener { startAddStep() }
@@ -321,11 +330,6 @@ class MultiActionEditActivity : AppCompatActivity() {
             }
             .setNeutralButton(android.R.string.cancel, null)
             .show()
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        handleBack()
     }
 
     private fun updateEmpty() {
