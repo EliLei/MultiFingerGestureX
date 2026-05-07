@@ -19,8 +19,9 @@
 ## Preview
 
 <p align="center">
-  <img src="docs/gif/preview_1.gif" alt="EdgeX preview 1" width="300" />
-  <img src="docs/gif/preview_2.gif" alt="EdgeX preview 2" width="300" />
+  <img src="docs/gif/preview_1.gif" alt="EdgeX preview 1" height="540" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/gif/preview_2.gif" alt="EdgeX preview 2" height="540" />
 </p>
 
 ## Overview
