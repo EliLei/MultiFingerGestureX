@@ -16,6 +16,13 @@
   <strong><a href="README_CN.md">中文</a></strong>
 </p>
 
+## Preview
+
+<p align="center">
+  <img src="docs/gif/preview_1.gif" alt="EdgeX preview 1" width="300" />
+  <img src="docs/gif/preview_2.gif" alt="EdgeX preview 2" width="300" />
+</p>
+
 ## Overview
 
 EdgeX is not a regular floating-window utility. The app process is only the configuration surface; the module logic runs entirely inside the `system_server` process injected by LSPosed/Xposed:
@@ -32,6 +39,9 @@ It is intended for rooted LSPosed users who want Xposed Edge-style shortcuts on 
 - **Hardware keys**: configure click, double-click, and long-press actions for Volume Up, Volume Down, and Power.
 - **System actions**: Back, Home, Recents, notifications, lock screen, screenshot, volume, brightness, and more.
 - **Apps and shortcuts**: launch selected apps or app shortcuts, with a root fallback for restricted shortcut discovery.
+- **Pie and custom panels**: open radial Pie menus or custom panels from gestures and keys.
+- **Action workflows**: save multiple-action combinations and run conditional actions for more flexible automation.
+- **App switching**: switch directly to the previous or next recent app.
 - **Freezer drawer**: manage frozen apps, open a side drawer, unfreeze and launch apps, then refreeze them.
 - **Clipboard history**: show the last 50 clipboard entries in a bottom-sheet overlay; tap any entry to inject it into the focused field, or delete individual entries.
 - **Universal copy**: collect accessible text from the current screen and copy selected text blocks from an overlay.
