@@ -42,7 +42,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         when (lpparam.packageName) {
-            "android" -> hookInputManager(lpparam)
+            "android" -> {
+                PremiumPluginLoader.tryLoad()
+                hookInputManager(lpparam)
+            }
         }
     }
 
@@ -240,6 +243,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val context = XposedHelpers.getObjectField(param.thisObject, "mContext")
                                 as android.content.Context
                             GestureManager.initSystemServer(context)
+                            PremiumPluginLoader.verifyDeviceBinding(context)
                         } catch (t: Throwable) {
                             XposedBridge.log("$TAG: Failed to initialize GestureManager in start(): ${t.message}")
                         }
@@ -298,6 +302,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val context = XposedHelpers.getObjectField(param.thisObject, "mContext")
                                 as android.content.Context
                             GestureManager.initSystemServer(context)
+                            PremiumPluginLoader.verifyDeviceBinding(context)
                         } catch (t: Throwable) {
                             XposedBridge.log("$TAG: Failed to initialize GestureManager in start(): ${t.message}")
                         }

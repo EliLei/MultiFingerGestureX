@@ -28,6 +28,11 @@ android {
         targetSdk = Configs.targetSdk
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: Configs.versionCode
         versionName = System.getenv("VERSION_NAME") ?: Configs.versionName
+        buildConfigField(
+            "String",
+            "PREMIUM_WORKER_URL",
+            "\"${localProperties.getProperty("PREMIUM_WORKER_URL") ?: System.getenv("PREMIUM_WORKER_URL") ?: ""}\""
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -82,6 +87,7 @@ android {
 
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
+    implementation(project(":premium-api"))
     implementation("com.github.topjohnwu.libsu:core:6.0.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
