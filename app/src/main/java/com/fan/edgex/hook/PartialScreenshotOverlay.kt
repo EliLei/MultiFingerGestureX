@@ -1,25 +1,35 @@
 package com.fan.edgex.hook
 
 import android.content.ContentValues
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.hardware.HardwareBuffer
 import android.hardware.display.DisplayManager
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.view.*
 import android.widget.*
 import androidx.core.graphics.toColorInt
+import com.fan.edgex.BuildConfig
+import com.fan.edgex.IShellCallback
+import com.fan.edgex.IShellExecutor
 import com.fan.edgex.R
 import com.fan.edgex.config.AppConfig
 import com.fan.edgex.config.HookConfigSnapshot
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import java.io.IOException
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal object PartialScreenshotOverlay {
 
@@ -125,9 +135,10 @@ internal object PartialScreenshotOverlay {
                 val finalBitmap = combinedView.getFinalBitmap()
                 combinedView.release(); dismiss()
                 Thread {
-                    try { saveToGallery(context, finalBitmap); finalBitmap.recycle() }
+                    try { saveToGallery(context, finalBitmap) }
                     catch (t: Throwable) {
                         XposedBridge.log("$TAG save failed: ${t.message}")
+                        finalBitmap.recycle()
                         showToast(context, ModuleRes.getString(R.string.partial_screenshot_failed))
                     }
                 }.start()
@@ -468,24 +479,153 @@ internal object PartialScreenshotOverlay {
 
     private fun saveToGallery(context: Context, bitmap: Bitmap) {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val displayName = "Screenshot_$timestamp.png"
+        if (saveToGalleryViaAppProcess(context, bitmap, displayName)) return
+
+        saveToGalleryDirect(context, bitmap, displayName)
+    }
+
+    private fun saveToGalleryViaAppProcess(context: Context, bitmap: Bitmap, displayName: String): Boolean {
+        val completed = AtomicBoolean(false)
+        val bitmapRecycled = AtomicBoolean(false)
+        var readSide: ParcelFileDescriptor? = null
+        var writeSide: ParcelFileDescriptor? = null
+        lateinit var connection: ServiceConnection
+
+        fun recycleBitmapOnce() {
+            if (bitmapRecycled.compareAndSet(false, true)) {
+                runCatching { bitmap.recycle() }
+            }
+        }
+
+        fun closePipe() {
+            runCatching { readSide?.close() }
+            runCatching { writeSide?.close() }
+            readSide = null
+            writeSide = null
+        }
+
+        fun finish(success: Boolean, message: String?) {
+            if (!completed.compareAndSet(false, true)) return
+            handler.removeCallbacksAndMessages(connection)
+            runCatching { context.unbindService(connection) }
+            if (success) {
+                showToast(context, ModuleRes.getString(R.string.partial_screenshot_saved))
+            } else {
+                if (!message.isNullOrBlank()) XposedBridge.log("$TAG app save failed: $message")
+                showToast(context, ModuleRes.getString(R.string.partial_screenshot_failed))
+            }
+        }
+
+        val timeout = Runnable {
+            if (!completed.compareAndSet(false, true)) return@Runnable
+            XposedBridge.log("$TAG app save timed out")
+            closePipe()
+            recycleBitmapOnce()
+            runCatching { context.unbindService(connection) }
+            showToast(context, ModuleRes.getString(R.string.partial_screenshot_failed))
+        }
+
+        val callback = object : IShellCallback.Stub() {
+            override fun onResult(success: Boolean, output: String?) {
+                finish(success, output)
+            }
+        }
+
+        connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                try {
+                    val executor = IShellExecutor.Stub.asInterface(binder)
+                    val pipe = ParcelFileDescriptor.createPipe()
+                    readSide = pipe[0]
+                    writeSide = pipe[1]
+                    executor.savePngToGallery(readSide, displayName, callback)
+                    runCatching { readSide?.close() }
+                    readSide = null
+                    Thread {
+                        try {
+                            ParcelFileDescriptor.AutoCloseOutputStream(writeSide).use { output ->
+                                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                    throw IOException("Bitmap compression returned false")
+                                }
+                            }
+                        } catch (t: Throwable) {
+                            XposedBridge.log("$TAG pipe write failed: ${t.message}")
+                            finish(false, t.message)
+                        } finally {
+                            writeSide = null
+                            recycleBitmapOnce()
+                        }
+                    }.start()
+                } catch (t: Throwable) {
+                    closePipe()
+                    recycleBitmapOnce()
+                    finish(false, t.message)
+                }
+            }
+
+            override fun onServiceDisconnected(name: ComponentName) {
+                finish(false, "ShellExecutorService disconnected")
+            }
+        }
+
+        val intent = Intent().apply {
+            component = ComponentName(
+                BuildConfig.APPLICATION_ID,
+                "${BuildConfig.APPLICATION_ID}.config.ShellExecutorService",
+            )
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+        }
+
+        return try {
+            val bound = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            if (bound) {
+                handler.postDelayed(timeout, connection, 15_000L)
+            } else {
+                XposedBridge.log("$TAG app save bindService returned false")
+            }
+            bound
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG app save bind failed: ${t.message}")
+            closePipe()
+            false
+        }
+    }
+
+    private fun saveToGalleryDirect(context: Context, bitmap: Bitmap, displayName: String) {
+        var uri: android.net.Uri? = null
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "Screenshot_$timestamp.png")
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
             put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Screenshots")
             put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
             put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
+            put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         try {
-            val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                showToast(context, ModuleRes.getString(R.string.partial_screenshot_saved))
-            } else {
-                showToast(context, ModuleRes.getString(R.string.partial_screenshot_failed))
+            val resolver = context.contentResolver
+            uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw IOException("MediaStore insert returned null")
+            val output = resolver.openOutputStream(uri, "w")
+                ?: throw IOException("MediaStore output stream is null")
+            output.use {
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) {
+                    throw IOException("Bitmap compression returned false")
+                }
             }
+            resolver.update(
+                uri,
+                ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) },
+                null,
+                null,
+            )
+            showToast(context, ModuleRes.getString(R.string.partial_screenshot_saved))
         } catch (t: Throwable) {
+            uri?.let { runCatching { context.contentResolver.delete(it, null, null) } }
             XposedBridge.log("$TAG saveToGallery failed: ${t.message}")
             showToast(context, ModuleRes.getString(R.string.partial_screenshot_failed))
+        } finally {
+            bitmap.recycle()
         }
     }
 
