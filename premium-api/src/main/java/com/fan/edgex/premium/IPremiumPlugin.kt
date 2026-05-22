@@ -25,5 +25,21 @@ interface IPremiumPlugin {
         alpha: Float,
     ): Boolean
 
+    fun onFluidEffectDown(
+        context: Context,
+        edge: String,
+        touchX: Float,
+        touchY: Float,
+        screenWidth: Float,
+        screenHeight: Float,
+        color: Int,
+        sizeProgress: Int,
+        alpha: Float,
+    ): Boolean
+
+    fun onFluidEffectMove(touchX: Float, touchY: Float): Boolean
+
+    fun onFluidEffectUp(onComplete: Runnable?): Boolean
+
     fun onScreenOff()
 }
