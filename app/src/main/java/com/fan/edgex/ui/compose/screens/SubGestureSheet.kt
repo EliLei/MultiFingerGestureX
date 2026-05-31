@@ -76,13 +76,26 @@ fun SubGestureSheet(
     var pickingDirection by remember { mutableStateOf<SubGestureDirection?>(null) }
     var secondarySheet by remember { mutableStateOf<SecondaryType?>(null) }
 
+    LaunchedEffect(prefKey, open) {
+        if (open) {
+            val existing = context.getConfigString(prefKey, "")
+            if (existing != "sub_gesture") {
+                context.putConfigsSync(
+                    prefKey to "sub_gesture",
+                    "${prefKey}_label" to context.getString(R.string.action_sub_gesture),
+                    "${prefKey}_title" to ""
+                )
+            }
+        }
+    }
+
     EdgeXBottomSheet(
         open = open,
         title = title.ifBlank { stringResource(R.string.action_sub_gesture) },
         onDismissRequest = {
             pickingDirection = null
             secondarySheet = null
-            onDismiss()
+            onSaved()
         },
     ) {
         val none = stringResource(R.string.action_none)

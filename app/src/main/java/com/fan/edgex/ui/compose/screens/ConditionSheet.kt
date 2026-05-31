@@ -55,7 +55,7 @@ fun ConditionSheet(
         onDismissRequest = {
             pickingBranch = null
             secondarySheet = null
-            onDismiss()
+            onSaved()
         },
     ) {
         val ifLabel = context.getConfigString(ConditionStore.condIfLabelKey(condId), none)
