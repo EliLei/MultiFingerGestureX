@@ -152,6 +152,7 @@ fun CustomPanelScreen(
             type = activeSecondary,
             prefKey = activeSlot.key,
             title = activeSlot.title,
+            excludedCodes = panelExcluded,
             onDismiss = { secondarySheet = null },
             onSaved = {
                 secondarySheet = null
@@ -248,6 +249,7 @@ fun SideBarScreen(
             type = activeSecondary,
             prefKey = activeSlot.key,
             title = activeSlot.title,
+            excludedCodes = excluded,
             onDismiss = { secondarySheet = null },
             onSaved = {
                 secondarySheet = null
