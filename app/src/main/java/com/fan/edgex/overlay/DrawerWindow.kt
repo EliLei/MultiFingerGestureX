@@ -47,7 +47,19 @@ class DrawerWindow(
     private val MOCK_MODE = false
 
     private val isDarkMode: Boolean
-        get() = resolveConfig(AppConfig.UI_DARK_MODE).toBoolean()
+        get() {
+            val darkSetting = resolveConfig(AppConfig.UI_DARK_MODE).ifBlank { "system" }
+            return when (darkSetting) {
+                "dark", "true" -> true
+                "light", "false" -> false
+                "system" -> {
+                    (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+                else -> {
+                    darkSetting.toBooleanStrictOrNull() ?: ((context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+                }
+            }
+        }
 
     fun show() {
         if (rootView != null) return

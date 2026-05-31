@@ -121,7 +121,17 @@ object ClipboardOverlay {
 
     private fun isDark(context: Context): Boolean {
         val snapshot = HookConfigSnapshot.readFromHookFile()
-        return snapshot[AppConfig.UI_DARK_MODE]?.toBoolean() ?: false
+        val darkSetting = snapshot[AppConfig.UI_DARK_MODE] ?: "system"
+        return when (darkSetting) {
+            "dark", "true" -> true
+            "light", "false" -> false
+            "system" -> {
+                (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+            else -> {
+                darkSetting.toBooleanStrictOrNull() ?: ((context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+            }
+        }
     }
 
     private fun readAccentColor(): Int {
