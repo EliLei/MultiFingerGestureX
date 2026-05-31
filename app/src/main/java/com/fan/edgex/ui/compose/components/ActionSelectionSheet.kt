@@ -38,7 +38,7 @@ val allActionSelectionItems = listOf(
     ActionSelectionItem("expand_notifications", R.string.action_expand_notifications, EdgeXIcons.Notifications),
     ActionSelectionItem("shell_command", R.string.action_shell_command, EdgeXIcons.Terminal, needsSecondary = true),
     ActionSelectionItem("sub_gesture", R.string.action_sub_gesture, EdgeXIcons.SubGesture, needsSecondary = true),
-    ActionSelectionItem("pie", R.string.action_pie, EdgeXIcons.Pie, needsSecondary = true),
+    ActionSelectionItem("pie", R.string.action_pie, EdgeXIcons.Pie),
     ActionSelectionItem("launch_app", R.string.action_launch_app, EdgeXIcons.LaunchApp, needsSecondary = true),
     ActionSelectionItem("app_shortcut", R.string.action_app_shortcut, EdgeXIcons.AppShortcut, needsSecondary = true),
     ActionSelectionItem("clear_background", R.string.action_clear_background, EdgeXIcons.ClearBackground),
