@@ -72,6 +72,7 @@ class SubGestureActivity : AppCompatActivity() {
             val label = ActionSelectionActivity.resolveActionLabel(this, action, rawLabel)
             val row = findViewById<View>(slot.rowId)
             row.findViewById<TextView>(R.id.action_subtitle).text = label
+            ActionSelectionActivity.applyActionIcon(this, action, row.findViewById(R.id.action_icon))
         }
     }
 }

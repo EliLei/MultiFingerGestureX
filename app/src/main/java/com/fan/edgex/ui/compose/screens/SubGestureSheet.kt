@@ -1,13 +1,35 @@
 package com.fan.edgex.ui.compose.screens
 
+import android.widget.ImageView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.fan.edgex.R
 import com.fan.edgex.config.AppConfig
 import com.fan.edgex.config.getConfigString
@@ -17,11 +39,13 @@ import com.fan.edgex.ui.compose.components.ActionSelectionSheet
 import com.fan.edgex.ui.compose.components.EdgeXBottomSheet
 import com.fan.edgex.ui.compose.components.EdgeXDivider
 import com.fan.edgex.ui.compose.components.EdgeXIcon
+import com.fan.edgex.ui.compose.components.EdgeXIconBox
 import com.fan.edgex.ui.compose.components.EdgeXIcons
 import com.fan.edgex.ui.compose.components.EdgeXListGroup
 import com.fan.edgex.ui.compose.components.EdgeXRow
 import com.fan.edgex.ui.compose.components.SecondaryActionDispatcher
 import com.fan.edgex.ui.compose.components.SecondaryType
+import com.fan.edgex.ui.compose.theme.EdgeXRadius
 import com.fan.edgex.ui.compose.theme.LocalEdgeXColors
 
 private data class SubGestureDirection(
@@ -68,10 +92,10 @@ fun SubGestureSheet(
                 val action = context.getConfigString(childKey, "none")
                 val rawLabel = context.getConfigString("${childKey}_label", "")
                 val label = com.fan.edgex.ui.ActionSelectionActivity.resolveActionLabel(context, action, rawLabel)
-                EdgeXRow(
+                SubGestureRow(
                     title = stringResource(dir.labelRes),
                     subtitle = label + refreshTick.let { "" },
-                    icon = EdgeXIcons.Gesture,
+                    actionCode = action,
                     onClick = { pickingDirection = dir },
                 ) {
                     EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = colors.onSurfaceDim)
@@ -80,7 +104,7 @@ fun SubGestureSheet(
             }
         }
     }
-
+ 
     val activeDir = pickingDirection
     if (activeDir != null) {
         val childKey = AppConfig.subGestureChildKey(prefKey, activeDir.direction)
@@ -108,7 +132,7 @@ fun SubGestureSheet(
             },
         )
     }
-
+ 
     val activeSecondary = secondarySheet
     if (activeSecondary != null && activeDir != null) {
         val childKey = AppConfig.subGestureChildKey(prefKey, activeDir.direction)
@@ -124,5 +148,89 @@ fun SubGestureSheet(
                 refreshTick++
             },
         )
+    }
+}
+
+@Composable
+private fun SubGestureRow(
+    title: String,
+    subtitle: String?,
+    actionCode: String,
+    onClick: () -> Unit,
+    trailing: @Composable RowScope.() -> Unit = {},
+) {
+    val context = LocalContext.current
+    val colors = LocalEdgeXColors.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(44.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val isApp = actionCode.startsWith("launch_app:")
+            val isShortcut = actionCode.startsWith("app_shortcut:")
+
+            var appDrawable by remember(actionCode) { mutableStateOf<android.graphics.drawable.Drawable?>(null) }
+
+            if (isApp || isShortcut) {
+                val pkg = if (isApp) {
+                    actionCode.removePrefix("launch_app:")
+                } else {
+                    actionCode.removePrefix("app_shortcut:").substringBefore(":")
+                }
+
+                LaunchedEffect(pkg) {
+                    appDrawable = runCatching {
+                        context.packageManager.getApplicationIcon(pkg)
+                    }.getOrNull()
+                }
+            }
+
+            if (appDrawable != null) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(EdgeXRadius.sm))
+                        .background(colors.accentSoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            ImageView(ctx).apply {
+                                scaleType = ImageView.ScaleType.FIT_CENTER
+                            }
+                        },
+                        update = { imageView ->
+                            imageView.setImageDrawable(appDrawable)
+                        },
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            } else {
+                val iconRes = com.fan.edgex.ui.ActionSelectionActivity.actionIconRes(actionCode)
+                EdgeXIconBox(
+                    imageVector = iconRes,
+                    contentDescription = null,
+                    background = colors.accentSoft,
+                    tint = colors.onAccentSoft
+                )
+            }
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = colors.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            if (!subtitle.isNullOrBlank()) {
+                Text(subtitle, color = colors.onSurfaceDim, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+
+        trailing()
     }
 }
