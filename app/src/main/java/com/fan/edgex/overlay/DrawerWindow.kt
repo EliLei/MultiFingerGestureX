@@ -47,8 +47,7 @@ class DrawerWindow(
     private val MOCK_MODE = false
 
     private val isDarkMode: Boolean
-        get() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
+        get() = resolveConfig(AppConfig.UI_DARK_MODE).toBoolean()
 
     fun show() {
         if (rootView != null) return
@@ -241,7 +240,7 @@ class DrawerWindow(
             val innerPadTop = (10 * dp).toInt()
             val innerPadBot = (8 * dp).toInt()
             val labelTopPad = (5 * dp).toInt()
-            val labelHeightPx = (18 * dp).toInt()
+            val labelHeightPx = (24 * dp).toInt()
             val cardHeight = iconSize + innerPadTop + labelTopPad + labelHeightPx + innerPadBot
             val cardCorner = (cardWidth * 0.22f).coerceAtMost(20f * dp)
 
@@ -276,17 +275,28 @@ class DrawerWindow(
                     layoutParams = LinearLayout.LayoutParams(0, cardHeight, 1f).apply {
                         setMargins(gap, gap, gap, gap)
                     }
+                    
                     background = GradientDrawable().apply {
-                        setColor(cardBg)
+                        setColor(if (dark) Color.argb(22, 255, 255, 255) else Color.argb(145, 255, 255, 255))
                         cornerRadius = cardCorner
+                        // Delicate reflection edge stroke for glassmorphism
+                        setStroke(
+                            (1 * dp).toInt(),
+                            if (dark) Color.argb(40, 255, 255, 255) else Color.argb(80, 255, 255, 255)
+                        )
                     }
+
+                    // Frosted card click ripple feedback using foreground
+                    val outValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                    foreground = context.getDrawable(outValue.resourceId)
+                    
                     outlineProvider = object : ViewOutlineProvider() {
                         override fun getOutline(view: View, outline: Outline) {
                             outline.setRoundRect(0, 0, view.width, view.height, cardCorner)
                         }
                     }
                     clipToOutline = true
-                    elevation = 3f * dp
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
@@ -314,6 +324,15 @@ class DrawerWindow(
                     setImageDrawable(ri.loadIcon(pm))
                     layoutParams = FrameLayout.LayoutParams(iconSize, iconSize)
                     if (frozen) { colorFilter = grayscaleFilter; alpha = 0.55f }
+                    
+                    // Clip the icon to a modern rounded squircle shape, perfectly covering adaptive icon backgrounds
+                    val iconCorner = iconSize * 0.2f
+                    outlineProvider = object : ViewOutlineProvider() {
+                        override fun getOutline(view: View, outline: Outline) {
+                            outline.setRoundRect(0, 0, view.width, view.height, iconCorner)
+                        }
+                    }
+                    clipToOutline = true
                 })
                 if (frozen) {
                     val badgeSize = (iconSize * 0.38f).toInt()
@@ -335,6 +354,10 @@ class DrawerWindow(
 
                 inner.addView(iconFrame)
                 inner.addView(TextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
                     text = ri.loadLabel(pm)
                     textSize = (iconSize / dp * 0.22f).coerceIn(9f, 12f)
                     gravity = Gravity.CENTER

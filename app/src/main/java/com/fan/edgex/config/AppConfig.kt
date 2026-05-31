@@ -12,6 +12,9 @@ object AppConfig {
     const val HAS_MIGRATED_FREEZER_LIST = "has_migrated_freezer_list"
     const val THEME_PRESET = "theme_preset"
     const val THEME_CUSTOM_COLOR = "theme_custom_color"
+    const val UI_ACCENT = "ui_accent"
+    const val UI_DARK_MODE = "ui_dark_mode"
+    const val UI_DENSITY = "ui_density"
     const val HAPTIC_FEEDBACK = "haptic_feedback_enabled"
     const val HAPTIC_FEEDBACK_TYPE = "haptic_feedback_type"
     const val EDGE_LIGHTING_ENABLED = "edge_lighting_enabled"
@@ -83,6 +86,9 @@ object AppConfig {
     const val PARTIAL_SCREENSHOT_ACTION = "partial_screenshot"
     const val PIE_RINGS = 2
     const val PIE_SLOTS_PER_RING = 6
+    const val PIE_SIZE_SCALE = "pie_size_scale"
+    const val PIE_COLOR = "pie_color"
+    const val PIE_SIZE_SCALE_DEFAULT = 1.0f
     val PIE_EDGES = listOf("left", "right", "top", "bottom")
 
     fun pieSlot(edge: String, ring: Int, slot: Int) = "pie_${edge}_ring${ring}_slot${slot}"
@@ -107,4 +113,28 @@ object AppConfig {
             "bottom_left", "bottom_mid", "bottom_right" -> "bottom"
             else -> null
         }
+
+    fun isActiveActionValue(value: String): Boolean =
+        value.isNotBlank() && value != "none"
+
+    fun gestureActionParts(key: String): Pair<String, String>? {
+        val gesture = GESTURES.sortedByDescending(String::length)
+            .firstOrNull { key.endsWith("_$it") }
+            ?: return null
+        val zone = key.removeSuffix("_$gesture")
+        return if (zone in ZONES) zone to gesture else null
+    }
+
+    fun keyActionParts(key: String): Pair<Int, String>? {
+        if (!key.startsWith("key_")) return null
+        val trigger = KEY_TRIGGERS.sortedByDescending(String::length)
+            .firstOrNull { key.endsWith("_$it") }
+            ?: return null
+        val keyCode = key
+            .removePrefix("key_")
+            .removeSuffix("_$trigger")
+            .toIntOrNull()
+            ?: return null
+        return keyCode to trigger
+    }
 }

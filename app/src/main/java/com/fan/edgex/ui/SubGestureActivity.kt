@@ -9,6 +9,7 @@ import com.fan.edgex.R
 import com.fan.edgex.config.AppConfig
 import com.fan.edgex.config.getConfigString
 
+@Deprecated("Use Compose SubGestureSheet instead")
 class SubGestureActivity : AppCompatActivity() {
 
     private data class SlotSpec(
@@ -65,7 +66,9 @@ class SubGestureActivity : AppCompatActivity() {
     private fun refreshSubtitles() {
         slots.forEach { slot ->
             val childKey = AppConfig.subGestureChildKey(parentKey, slot.direction)
-            val label = getConfigString("${childKey}_label", getString(R.string.action_none))
+            val action = getConfigString(childKey, "none")
+            val rawLabel = getConfigString("${childKey}_label", getString(R.string.action_none))
+            val label = ActionSelectionActivity.resolveActionLabel(this, action, rawLabel)
             val row = findViewById<View>(slot.rowId)
             row.findViewById<TextView>(R.id.action_subtitle).text = label
         }
