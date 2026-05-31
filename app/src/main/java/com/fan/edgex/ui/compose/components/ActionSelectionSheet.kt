@@ -131,20 +131,24 @@ fun ActionSelectionSheet(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            val baseRows = others.chunked(2)
-            val specialRow = listOfNotNull(musicItem, shellItem)
-
-            val finalRows = mutableListOf<List<ActionSelectionItem>>()
-            var inserted = false
-            baseRows.forEach { row ->
-                finalRows.add(row)
-                if (!inserted && specialRow.isNotEmpty() && row.any { it.code == "expand_notifications" || it.code == "sub_gesture" }) {
-                    finalRows.add(specialRow)
-                    inserted = true
+            val finalRows = if (searchQuery.isNotBlank()) {
+                filtered.chunked(2)
+            } else {
+                val baseRows = others.chunked(2)
+                val specialRow = listOfNotNull(musicItem, shellItem)
+                val fRows = mutableListOf<List<ActionSelectionItem>>()
+                var inserted = false
+                baseRows.forEach { row ->
+                    fRows.add(row)
+                    if (!inserted && specialRow.isNotEmpty() && row.any { it.code == "expand_notifications" || it.code == "sub_gesture" }) {
+                        fRows.add(specialRow)
+                        inserted = true
+                    }
                 }
-            }
-            if (!inserted && specialRow.isNotEmpty()) {
-                finalRows.add(specialRow)
+                if (!inserted && specialRow.isNotEmpty()) {
+                    fRows.add(specialRow)
+                }
+                fRows
             }
 
             finalRows.forEach { rowItems ->
