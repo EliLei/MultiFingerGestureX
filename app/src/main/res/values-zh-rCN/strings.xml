@@ -80,7 +80,7 @@
     <string name="label_project_url">项目地址</string>
     <string name="label_version">版本</string>
     <string name="value_author">fantasy1999</string>
-    <string name="value_project_url">github.com/fcmfcm199/EdgeX</string>
+    <string name="value_project_url">github.com/fcmfcm1999/EdgeX</string>
     <string name="value_version">0.1</string>
 
     <!-- 更新检查 -->
