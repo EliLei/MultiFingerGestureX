@@ -13,16 +13,12 @@ object HookConfigSnapshot {
     val ACTION_EXECUTE_ACTION = "${BuildConfig.APPLICATION_ID}.ACTION_EXECUTE_ACTION"
     val ACTION_HOOK_STATUS_REQUEST = "${BuildConfig.APPLICATION_ID}.ACTION_HOOK_STATUS_REQUEST"
     val ACTION_HOOK_STATUS_RESPONSE = "${BuildConfig.APPLICATION_ID}.ACTION_HOOK_STATUS_RESPONSE"
-    val ACTION_EDGE_LIGHTING = "${BuildConfig.APPLICATION_ID}.ACTION_EDGE_LIGHTING"
-    val ACTION_EDGE_LIGHTING_DISMISS = "${BuildConfig.APPLICATION_ID}.ACTION_EDGE_LIGHTING_DISMISS"
-    const val EXTRA_EDGE_LIGHTING_NOTIFICATION_KEY = "edge_lighting_notification_key"
+
     const val EXTRA_KEYS = "keys"
     const val EXTRA_VALUES = "values"
     const val EXTRA_FULL_SNAPSHOT = "full_snapshot"
     const val EXTRA_ACTION_CODE = "action_code"
     const val EXTRA_HOOK_ACTIVE_AT = "hook_active_at"
-    const val EXTRA_EDGE_LIGHTING_COLOR = "color"
-    const val EXTRA_EDGE_LIGHTING_DURATION_MS = "duration_ms"
 
     private const val SNAPSHOT_FILE = "hook_config.properties"
     private const val TEMP_FILE = "$SNAPSHOT_FILE.tmp"
@@ -67,7 +63,7 @@ object HookConfigSnapshot {
 
             val temp = File(file.parentFile, TEMP_FILE)
             FileOutputStream(temp).use { out ->
-                properties.store(out, "EdgeX hook config snapshot")
+                properties.store(out, "MFGX hook config snapshot")
                 out.fd.sync()
             }
             if (!temp.renameTo(file)) {
@@ -97,7 +93,7 @@ object HookConfigSnapshot {
         File(context.createDeviceProtectedStorageContext().filesDir, SNAPSHOT_FILE)
 
     private fun systemSnapshotFile(): File =
-        File("/data/system/edgex/$SNAPSHOT_FILE")
+        File("/data/system/mfgx/$SNAPSHOT_FILE")
 
     private fun makeHookReadable(file: File) {
         file.setReadable(true, false)

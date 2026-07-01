@@ -22,7 +22,7 @@ internal class HookConfigRepository(
     private var systemContext: Context? = null
 
     private val configExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "EdgeX-Config").apply { isDaemon = true }
+        Thread(runnable, "MFGX-Config").apply { isDaemon = true }
     }
 
     fun attachSystemContext(context: Context) {
@@ -70,15 +70,6 @@ internal class HookConfigRepository(
     fun isGesturesEnabled(): Boolean =
         get(AppConfig.GESTURES_ENABLED) == "true"
 
-    fun isZoneEnabled(zone: String): Boolean {
-        val enabledValue = get(AppConfig.zoneEnabled(zone))
-        if (enabledValue.isNotEmpty()) return enabledValue == "true"
-
-        return AppConfig.GESTURES.any { gesture ->
-            AppConfig.isActiveActionValue(get(AppConfig.gestureAction(zone, gesture)))
-        }
-    }
-
     fun get(key: String, defValue: String = ""): String =
         configCache[key] ?: defValue
 
@@ -87,7 +78,7 @@ internal class HookConfigRepository(
         if (snapshot.isEmpty()) {
             if (!missingSnapshotLogged) {
                 missingSnapshotLogged = true
-                log("Config snapshot unavailable; requesting EdgeX to publish hook config")
+                log("Config snapshot unavailable; requesting MFGX to publish hook config")
             }
             requestSnapshotFromApp()
             return false
