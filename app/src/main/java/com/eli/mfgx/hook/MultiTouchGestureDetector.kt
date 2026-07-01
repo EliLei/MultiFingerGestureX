@@ -8,6 +8,8 @@ import android.view.MotionEvent
  *
  * 状态：INACTIVE → WAITING → ACTIVE → (判定) → INACTIVE
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
+ *
+ * 线程安全：所有公开方法线程安全，可在 InputManagerService hook 线程调用。
  */
 internal class MultiTouchGestureDetector(
     private val handoff: EventReplayHandoff,
@@ -34,9 +36,13 @@ internal class MultiTouchGestureDetector(
         var currentY: Float,
     )
 
-    private var state = State.INACTIVE
+    // LinkedHashMap 保持插入顺序，确保手势判定一致性
     private val pointers = LinkedHashMap<Int, PointerInfo>()
     private val ignoredIds = mutableSetOf<Int>()
+    @Volatile private var state = State.INACTIVE
+
+    // 状态锁 - 保护所有可变状态访问
+    private val stateLock = Any()
 
     fun handle(event: MotionEvent, context: Context): Boolean {
         // ACTION_CANCEL 任意状态都清理
@@ -56,42 +62,55 @@ internal class MultiTouchGestureDetector(
     }
 
     fun reset() {
-        state = State.INACTIVE
-        pointers.clear()
-        ignoredIds.clear()
+        synchronized(stateLock) {
+            state = State.INACTIVE
+            pointers.clear()
+            ignoredIds.clear()
+        }
         handoff.clear()
     }
 
     private fun handleDown(event: MotionEvent): Boolean {
         // 无论先前状态，新 ACTION_DOWN 开启新序列
         reset()
-        pointers[event.getPointerId(0)] = PointerInfo(
-            event.getPointerId(0), event.rawX, event.rawY, event.rawX, event.rawY
-        )
-        state = State.WAITING
+        if (event.pointerCount == 0) return false
+
+        val pid = event.getPointerId(0)
+        val x = event.getRawX(0)
+        val y = event.getRawY(0)
+
+        synchronized(stateLock) {
+            pointers[pid] = PointerInfo(pid, x, y, x, y)
+            state = State.WAITING
+        }
         return false // WAITING 不劫持
     }
 
     private fun handlePointerDown(event: MotionEvent, context: Context): Boolean {
-        if (state == State.INACTIVE) return false
+        if (getState() == State.INACTIVE) return false
 
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
-        // 同步所有指针当前位置
-        syncPointers(event)
+        // 同步所有指针当前位置并注册新指针
+        syncPointers(event, registerNew = true)
 
-        if (state == State.WAITING) {
+        val currentState = getState()
+        if (currentState == State.WAITING) {
             val threshold = callbacks.minEnabledFingerCount()
-            if (threshold != null && pointers.size >= threshold) {
+            val pointerCount: Int
+            synchronized(stateLock) {
+                pointerCount = pointers.size
+            }
+            if (threshold != null && pointerCount >= threshold) {
                 // 进入 ACTIVE，本次 POINTER_DOWN 也被劫持记录
-                state = State.ACTIVE
+                setState(State.ACTIVE)
                 handoff.record(event)
                 return true // 消费
             }
             return false // 仍在 WAITING，不劫持
         }
 
-        if (state == State.ACTIVE) {
+        if (currentState == State.ACTIVE) {
             handoff.record(event)
             return true
         }
@@ -99,12 +118,13 @@ internal class MultiTouchGestureDetector(
     }
 
     private fun handleMove(event: MotionEvent, context: Context): Boolean {
-        if (state != State.ACTIVE) {
+        val currentState = getState()
+        if (currentState != State.ACTIVE) {
             // WAITING/INACTIVE 期间更新坐标但不劫持
-            if (state == State.WAITING) syncPointers(event)
+            if (currentState == State.WAITING) syncPointers(event, registerNew = false)
             return false
         }
-        syncPointers(event)
+        syncPointers(event, registerNew = false)
         handoff.record(event)
         return true
     }
@@ -112,15 +132,18 @@ internal class MultiTouchGestureDetector(
     private fun handlePointerUp(event: MotionEvent, context: Context): Boolean {
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
-        syncPointers(event)
+        syncPointers(event, registerNew = false)
 
-        if (state == State.WAITING) {
+        val currentState = getState()
+        if (currentState == State.WAITING) {
             // 进入 ACTIVE 前抬起的指针标记忽略
-            ignoredIds.add(pid)
-            pointers.remove(pid)
+            synchronized(stateLock) {
+                ignoredIds.add(pid)
+                pointers.remove(pid)
+            }
             return false
         }
-        if (state == State.ACTIVE) {
+        if (currentState == State.ACTIVE) {
             handoff.record(event)
             finishGesture(event, context)
             return true
@@ -129,8 +152,9 @@ internal class MultiTouchGestureDetector(
     }
 
     private fun handleUp(event: MotionEvent, context: Context): Boolean {
-        syncPointers(event)
-        if (state == State.ACTIVE) {
+        syncPointers(event, registerNew = false)
+        val currentState = getState()
+        if (currentState == State.ACTIVE) {
             handoff.record(event)
             finishGesture(event, context)
             return true
@@ -140,9 +164,23 @@ internal class MultiTouchGestureDetector(
         return false
     }
 
+    private fun getState(): State = state
+
+    private fun setState(newState: State) {
+        synchronized(stateLock) {
+            state = newState
+        }
+    }
+
     private fun finishGesture(event: MotionEvent, context: Context) {
         // 有效指针 = 当前仍在 pointers 中（含本次抬起的，因为 syncPointers 后未移除）
-        val valid = pointers.values.filterNot { ignoredIds.contains(it.pointerId) }
+        val valid: List<PointerInfo>
+        val ignored: Set<Int>
+        synchronized(stateLock) {
+            valid = pointers.values.filterNot { ignoredIds.contains(it.pointerId) }
+            ignored = ignoredIds.toSet() // Copy for thread-safe access outside lock
+        }
+
         val snapshots = valid.map {
             MultiTouchGestureRecognizer.PointerSnapshot(
                 it.pointerId, it.startX, it.startY, it.currentX, it.currentY
@@ -168,17 +206,22 @@ internal class MultiTouchGestureDetector(
         reset()
     }
 
-    private fun syncPointers(event: MotionEvent) {
+    private fun syncPointers(event: MotionEvent, registerNew: Boolean) {
         for (i in 0 until event.pointerCount) {
             val pid = event.getPointerId(i)
-            val existing = pointers[pid]
-            val x = event.getX(i)
-            val y = event.getY(i)
-            if (existing != null) {
-                existing.currentX = x
-                existing.currentY = y
+            val x = event.getRawX(i)
+            val y = event.getRawY(i)
+
+            synchronized(stateLock) {
+                val existing = pointers[pid]
+                if (existing != null) {
+                    existing.currentX = x
+                    existing.currentY = y
+                } else if (registerNew) {
+                    // 新指针按当前位置为起点登记
+                    pointers[pid] = PointerInfo(pid, x, y, x, y)
+                }
             }
-            // 新指针（POINTER_DOWN 尚未处理时）按当前位置为起点登记
         }
     }
 }
