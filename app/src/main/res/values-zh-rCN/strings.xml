@@ -139,10 +139,14 @@
     <string name="gesture_swipe_right">右划</string>
     <string name="gesture_pinch_in">捏合</string>
     <string name="gesture_pinch_out">扩张</string>
+    <string name="gesture_quick_swipe_up">快速上划</string>
+    <string name="gesture_quick_swipe_down">快速下划</string>
     <string name="header_multitouch_gestures">多指手势</string>
     <string name="header_thresholds">灵敏度阈值</string>
     <string name="label_small_threshold">小阈值</string>
     <string name="label_large_threshold">大阈值</string>
+    <string name="label_waiting_timeout">等待超时</string>
+    <string name="label_speed_threshold">快速滑动速度</string>
     <string name="tab_3_fingers">三指</string>
     <string name="tab_4_fingers">四指</string>
     <string name="tab_5_fingers">五指</string>

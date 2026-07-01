@@ -142,6 +142,8 @@
     <string name="gesture_swipe_right">Swipe Right</string>
     <string name="gesture_pinch_in">Pinch In</string>
     <string name="gesture_pinch_out">Pinch Out</string>
+    <string name="gesture_quick_swipe_up">Quick Swipe Up</string>
+    <string name="gesture_quick_swipe_down">Quick Swipe Down</string>
 
     <!-- Multi-Touch Gesture Tabs -->
     <string name="tab_3_fingers">3 Fingers</string>
@@ -151,6 +153,8 @@
     <!-- Threshold Labels -->
     <string name="label_small_threshold">Small Threshold</string>
     <string name="label_large_threshold">Large Threshold</string>
+    <string name="label_waiting_timeout">Waiting Timeout</string>
+    <string name="label_speed_threshold">Quick Swipe Speed</string>
     <string name="action_not_set">Not set</string>
 
     <!-- Action Selection Items -->
