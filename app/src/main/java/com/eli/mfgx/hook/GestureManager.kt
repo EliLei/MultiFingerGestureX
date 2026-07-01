@@ -81,6 +81,18 @@ object GestureManager {
                         AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT.toString()
                     ).toIntOrNull() ?: AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT
 
+                override fun waitingTimeoutMs(): Int =
+                    configRepository.get(
+                        AppConfig.GESTURE_WAITING_TIMEOUT_MS,
+                        AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
+                    ).toIntOrNull() ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT
+
+                override fun speedThreshold(): Float =
+                    configRepository.get(
+                        AppConfig.GESTURE_SPEED_THRESHOLD,
+                        AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
+                    ).toFloatOrNull() ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT
+
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
         )

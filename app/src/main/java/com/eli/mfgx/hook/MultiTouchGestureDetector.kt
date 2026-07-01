@@ -7,6 +7,7 @@ import android.view.MotionEvent
  * 多指手势状态机。
  *
  * 状态：INACTIVE → WAITING → ACTIVE → (判定) → INACTIVE
+ * WAITING 态进入后若 [Callbacks.waitingTimeoutMs] 内未进入 ACTIVE 则回到 INACTIVE。
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
  *
  * 线程安全：所有公开方法线程安全，可在 InputManagerService hook 线程调用。
@@ -23,6 +24,8 @@ internal class MultiTouchGestureDetector(
         fun dispatchAction(count: Int, type: MultiTouchGestureType, context: Context)
         fun smallThreshold(): Int
         fun largeThreshold(): Int
+        fun waitingTimeoutMs(): Int
+        fun speedThreshold(): Float
         fun log(message: String)
     }
 
@@ -34,12 +37,14 @@ internal class MultiTouchGestureDetector(
         val startY: Float,
         var currentX: Float,
         var currentY: Float,
+        val startTimeMs: Long,
     )
 
     // LinkedHashMap 保持插入顺序，确保手势判定一致性
     private val pointers = LinkedHashMap<Int, PointerInfo>()
     private val ignoredIds = mutableSetOf<Int>()
     @Volatile private var state = State.INACTIVE
+    private var waitingEnteredTimeMs: Long = 0L
 
     // 状态锁 - 保护所有可变状态访问
     private val stateLock = Any()
@@ -78,16 +83,23 @@ internal class MultiTouchGestureDetector(
         val pid = event.getPointerId(0)
         val x = event.getRawX(0)
         val y = event.getRawY(0)
+        val now = event.eventTime
 
         synchronized(stateLock) {
-            pointers[pid] = PointerInfo(pid, x, y, x, y)
+            pointers[pid] = PointerInfo(pid, x, y, x, y, now)
             state = State.WAITING
+            waitingEnteredTimeMs = now
         }
         return false // WAITING 不劫持
     }
 
     private fun handlePointerDown(event: MotionEvent, context: Context): Boolean {
         if (getState() == State.INACTIVE) return false
+        // WAITING 超时：第一指落下后超时未凑齐阈值 → 作废
+        if (getState() == State.WAITING && waitingExpired(event.eventTime)) {
+            reset()
+            return false
+        }
 
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
@@ -121,7 +133,13 @@ internal class MultiTouchGestureDetector(
         val currentState = getState()
         if (currentState != State.ACTIVE) {
             // WAITING/INACTIVE 期间更新坐标但不劫持
-            if (currentState == State.WAITING) syncPointers(event, registerNew = false)
+            if (currentState == State.WAITING) {
+                if (waitingExpired(event.eventTime)) {
+                    reset()
+                    return false
+                }
+                syncPointers(event, registerNew = false)
+            }
             return false
         }
         syncPointers(event, registerNew = false)
@@ -172,6 +190,13 @@ internal class MultiTouchGestureDetector(
         }
     }
 
+    private fun waitingExpired(nowMs: Long): Boolean {
+        synchronized(stateLock) {
+            return state == State.WAITING &&
+                nowMs - waitingEnteredTimeMs >= callbacks.waitingTimeoutMs()
+        }
+    }
+
     private fun finishGesture(event: MotionEvent, context: Context) {
         // 有效指针 = 当前仍在 pointers 中（含本次抬起的，因为 syncPointers 后未移除）
         val valid: List<PointerInfo>
@@ -181,15 +206,18 @@ internal class MultiTouchGestureDetector(
             ignored = ignoredIds.toSet() // Copy for thread-safe access outside lock
         }
 
+        val endTimeMs = event.eventTime
         val snapshots = valid.map {
             MultiTouchGestureRecognizer.PointerSnapshot(
-                it.pointerId, it.startX, it.startY, it.currentX, it.currentY
+                it.pointerId, it.startX, it.startY, it.currentX, it.currentY, it.startTimeMs
             )
         }
         val result = MultiTouchGestureRecognizer.recognize(
             snapshots,
+            endTimeMs,
             callbacks.smallThreshold().toFloat(),
             callbacks.largeThreshold().toFloat(),
+            callbacks.speedThreshold(),
         )
 
         if (result != null && callbacks.isGestureEnabled(result.fingerCount, result.type)) {
@@ -207,6 +235,7 @@ internal class MultiTouchGestureDetector(
     }
 
     private fun syncPointers(event: MotionEvent, registerNew: Boolean) {
+        val now = event.eventTime
         for (i in 0 until event.pointerCount) {
             val pid = event.getPointerId(i)
             val x = event.getRawX(i)
@@ -219,7 +248,7 @@ internal class MultiTouchGestureDetector(
                     existing.currentY = y
                 } else if (registerNew) {
                     // 新指针按当前位置为起点登记
-                    pointers[pid] = PointerInfo(pid, x, y, x, y)
+                    pointers[pid] = PointerInfo(pid, x, y, x, y, now)
                 }
             }
         }
