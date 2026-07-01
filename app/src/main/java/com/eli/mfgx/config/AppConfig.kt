@@ -49,13 +49,21 @@ object AppConfig {
     // ===== Multi-touch gestures =====
     val MULTI_TOUCH_FINGER_COUNTS = listOf(3, 4, 5)
     val MULTI_TOUCH_GESTURE_TYPES = listOf(
-        "swipe_up", "swipe_down", "swipe_left", "swipe_right", "pinch_in", "pinch_out"
+        "swipe_up", "swipe_down",
+        "quick_swipe_up", "quick_swipe_down",
+        "swipe_left", "swipe_right",
+        "pinch_in", "pinch_out",
     )
 
     const val GESTURE_SMALL_THRESHOLD = "gesture_small_threshold"
     const val GESTURE_LARGE_THRESHOLD = "gesture_large_threshold"
     const val GESTURE_SMALL_THRESHOLD_DEFAULT = 12
     const val GESTURE_LARGE_THRESHOLD_DEFAULT = 24
+
+    const val GESTURE_WAITING_TIMEOUT_MS = "gesture_waiting_timeout_ms"
+    const val GESTURE_SPEED_THRESHOLD = "gesture_speed_threshold"
+    const val GESTURE_WAITING_TIMEOUT_MS_DEFAULT = 100
+    val GESTURE_SPEED_THRESHOLD_DEFAULT = 1.5f
 
     fun gestureEnabledKey(count: Int, type: String) = "gesture_${count}_${type}_enabled"
     fun gestureActionKey(count: Int, type: String) = "gesture_${count}_${type}_action"
