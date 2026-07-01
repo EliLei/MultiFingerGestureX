@@ -146,6 +146,13 @@ internal class GestureActionDispatcher(
         }
     }
 
+    fun triggerMultiTouchAction(action: String, context: Context) {
+        if (action.isBlank() || action == "none") return
+        handlerProvider().post {
+            performAction(action, context, 0f, 0f)
+        }
+    }
+
     fun adjustBrightness(context: Context, up: Boolean) =
         com.eli.mfgx.action.AppActionExecutor.adjustBrightness(context, up)
 
