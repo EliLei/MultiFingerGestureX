@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.eli.mfgx.R
-import com.eli.mfgx.license.PremiumActivator
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.ModuleActivationState
 import com.eli.mfgx.config.configPrefs
@@ -33,18 +32,12 @@ import com.eli.mfgx.config.putConfig
 import com.eli.mfgx.ui.compose.components.EdgeXToast
 import com.eli.mfgx.ui.compose.components.UpdateDialog
 import com.eli.mfgx.ui.compose.screens.AboutScreen
-import com.eli.mfgx.ui.compose.screens.EdgeLightingScreen
-import com.eli.mfgx.ui.compose.screens.FluidEffectScreen
-import com.eli.mfgx.ui.compose.screens.FreezerScreen
-import com.eli.mfgx.ui.compose.screens.GesturesScreen
 import com.eli.mfgx.ui.compose.screens.HomeCallbacks
 import com.eli.mfgx.ui.compose.screens.HomeScreen
-import com.eli.mfgx.ui.compose.screens.HomeStats
-import com.eli.mfgx.ui.compose.screens.KeysScreen
+import com.eli.mfgx.ui.compose.screens.MultiTouchGesturesScreen
 import com.eli.mfgx.ui.compose.screens.MultiScreen
 import com.eli.mfgx.ui.compose.screens.PieScreen
 import com.eli.mfgx.ui.compose.screens.CustomPanelScreen
-import com.eli.mfgx.ui.compose.screens.PremiumScreen
 import com.eli.mfgx.ui.compose.screens.SideBarScreen
 import com.eli.mfgx.ui.compose.screens.ThemeScreen
 import com.eli.mfgx.ui.compose.theme.EdgeXAccent
@@ -56,17 +49,12 @@ import kotlinx.coroutines.delay
 
 enum class EdgeXRoute(@StringRes val labelRes: Int) {
     Home(R.string.compose_route_home),
-    Gestures(R.string.header_gestures),
-    Keys(R.string.header_keys),
-    Freezer(R.string.header_freezer),
+    MultiTouchGestures(R.string.header_multitouch_gestures),
     Pie(R.string.header_pie_settings),
     CustomPanel(R.string.menu_custom_panel),
     SideBar(R.string.menu_side_bar),
     Multi(R.string.menu_multi_actions),
     Theme(R.string.header_theme),
-    EdgeLighting(R.string.menu_edge_lighting),
-    FluidEffect(R.string.menu_fluid_effect),
-    Premium(R.string.menu_premium),
     About(R.string.menu_about),
 }
 
@@ -76,13 +64,13 @@ data class HomeUiState(
     val debug: Boolean,
     val haptic: Boolean,
     val hapticType: String,
-    val arcDrawer: Boolean,
-    val keysEnabled: Boolean,
-    val edgeLighting: Boolean,
     val moduleActive: Boolean,
     val accent: EdgeXAccent,
     val darkMode: Boolean,
-    val premiumStatus: PremiumActivator.Status,
+)
+
+data class HomeStats(
+    val configuredGestures: Int,
 )
 
 @Composable
@@ -137,7 +125,7 @@ fun EdgeXApp() {
     }
 
     LaunchedEffect(Unit) {
-        (context as? Activity)?.let { activity ->
+        (context as? Activity).let { activity ->
             UpdateChecker.checkOnLaunch(activity) { availableUpdate = it }
         }
         ModuleActivationState.requestRefresh(context)
@@ -149,7 +137,7 @@ fun EdgeXApp() {
         val colors = LocalEdgeXColors.current
         BackHandler(enabled = stack.size > 1) {
             when (stack.last()) {
-                EdgeXRoute.Gestures,
+                EdgeXRoute.MultiTouchGestures,
                 EdgeXRoute.Theme -> popRouteAndRefresh()
                 else -> popRoute()
             }
@@ -187,20 +175,11 @@ fun EdgeXApp() {
                                 refresh()
                             },
                             setArcDrawer = {
-                                context.putConfig(AppConfig.FREEZER_ARC_DRAWER, it)
-                                refresh()
+                                // No longer applicable; kept for interface compatibility
                             },
                         ),
                     )
-                    EdgeXRoute.Gestures -> GesturesScreen(
-                        onBack = ::popRouteAndRefresh,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.Freezer -> FreezerScreen(
-                        onBack = ::popRouteAndRefresh,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.Keys -> KeysScreen(
+                    EdgeXRoute.MultiTouchGestures -> MultiTouchGesturesScreen(
                         onBack = ::popRouteAndRefresh,
                         showToast = ::showToast,
                     )
@@ -220,20 +199,6 @@ fun EdgeXApp() {
                     EdgeXRoute.Theme -> ThemeScreen(
                         onBack = ::popRouteAndRefresh,
                         onThemeChanged = ::refresh,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.EdgeLighting -> EdgeLightingScreen(
-                        onBack = ::popRoute,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.FluidEffect -> FluidEffectScreen(
-                        onBack = ::popRoute,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.Premium -> PremiumScreen(
-                        onBack = ::popRoute,
-                        onOpenEdgeLighting = { stack.add(EdgeXRoute.EdgeLighting) },
-                        onOpenFluidEffect = { stack.add(EdgeXRoute.FluidEffect) },
                         showToast = ::showToast,
                     )
                     EdgeXRoute.About -> AboutScreen(
@@ -284,9 +249,6 @@ private fun Context.readHomeUiState(): HomeUiState =
             AppConfig.HAPTIC_FEEDBACK_TYPE,
             AppConfig.HAPTIC_FEEDBACK_TYPE_CLICK,
         ),
-        arcDrawer = getConfigBool(AppConfig.FREEZER_ARC_DRAWER),
-        keysEnabled = getConfigBool(AppConfig.KEYS_ENABLED),
-        edgeLighting = getConfigBool(AppConfig.EDGE_LIGHTING_ENABLED, default = true),
         moduleActive = ModuleActivationState.isActive(this),
         accent = EdgeXAccent.fromId(getConfigString(AppConfig.UI_ACCENT, EdgeXAccent.Default.id)),
         darkMode = run {
@@ -300,50 +262,19 @@ private fun Context.readHomeUiState(): HomeUiState =
                         android.content.res.Configuration.UI_MODE_NIGHT_YES)
             }
         },
-        premiumStatus = PremiumActivator.status(this),
     )
 
 private fun Context.readHomeStats(): HomeStats {
-    val configuredGestures = AppConfig.ZONES.sumOf { zone ->
-        AppConfig.GESTURES.count { gesture ->
-            val value = getConfigString(AppConfig.gestureAction(zone, gesture), "none")
-            value.isNotBlank() && value != "none"
-        }
-    }
     val prefs = configPrefs()
-    val activeZones = AppConfig.ZONES.count { zone ->
-        val enabledKey = AppConfig.zoneEnabled(zone)
-        if (prefs.contains(enabledKey)) {
-            getConfigBool(enabledKey)
-        } else {
-            AppConfig.GESTURES.any { gesture ->
-                AppConfig.isActiveActionValue(getConfigString(AppConfig.gestureAction(zone, gesture), "none"))
+    var configuredGestures = 0
+    for (count in AppConfig.MULTI_TOUCH_FINGER_COUNTS) {
+        for (type in AppConfig.MULTI_TOUCH_GESTURE_TYPES) {
+            val enabled = prefs.getString(AppConfig.gestureEnabledKey(count, type), "false") == "true"
+            val action = prefs.getString(AppConfig.gestureActionKey(count, type), "")
+            if (enabled && !action.isNullOrBlank() && action != "none") {
+                configuredGestures++
             }
         }
     }
-    val frozenCount = prefs
-        .getString(AppConfig.FREEZER_APP_LIST, null)
-        ?.split(',')
-        ?.count { it.isNotBlank() }
-        ?: 0
-    val keyCount = if (getConfigBool(AppConfig.KEYS_ENABLED)) {
-        listOf(24, 25, 26).count { keyCode ->
-            val enabledKey = AppConfig.keyEnabled(keyCode)
-            if (prefs.contains(enabledKey)) {
-                getConfigBool(enabledKey)
-            } else {
-                AppConfig.KEY_TRIGGERS.any { trigger ->
-                    AppConfig.isActiveActionValue(getConfigString(AppConfig.keyAction(keyCode, trigger), "none"))
-                }
-            }
-        }
-    } else {
-        0
-    }
-    return HomeStats(
-        configuredGestures = configuredGestures,
-        activeZones = activeZones,
-        frozenApps = frozenCount,
-        keyCount = keyCount,
-    )
+    return HomeStats(configuredGestures = configuredGestures)
 }

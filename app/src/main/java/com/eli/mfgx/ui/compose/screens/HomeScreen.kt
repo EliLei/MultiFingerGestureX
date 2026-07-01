@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
-import com.eli.mfgx.license.PremiumActivator
 import com.eli.mfgx.ui.compose.EdgeXRoute
 import com.eli.mfgx.ui.compose.HomeUiState
 import com.eli.mfgx.ui.compose.components.EdgeXBottomSheet
@@ -54,13 +53,6 @@ import com.eli.mfgx.ui.compose.components.EdgeXTile
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.theme.EdgeXRadius
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
-
-data class HomeStats(
-    val configuredGestures: Int,
-    val activeZones: Int,
-    val frozenApps: Int,
-    val keyCount: Int,
-)
 
 data class HomeCallbacks(
     val openRoute: (EdgeXRoute) -> Unit,
@@ -113,7 +105,7 @@ fun HomeScreen(
         SectionLabel(stringResource(R.string.menu_advanced))
         AdvancedSettings(state, callbacks)
         SectionLabel(stringResource(R.string.compose_section_about))
-        AboutSettings(callbacks, state.premiumStatus)
+        AboutSettings(callbacks)
         Spacer(modifier = Modifier.height(28.dp))
     }
 }
@@ -182,7 +174,7 @@ private fun HeroCard(stats: HomeStats, moduleActive: Boolean) {
             modifier = Modifier.padding(top = 14.dp),
         )
         Text(
-            text = stringResource(R.string.compose_home_hero_subtitle, stats.configuredGestures, stats.activeZones),
+            text = stringResource(R.string.compose_home_hero_subtitle, stats.configuredGestures),
             color = colors.onAccentSoft.copy(alpha = 0.72f),
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
@@ -197,8 +189,6 @@ private fun HeroCard(stats: HomeStats, moduleActive: Boolean) {
                 .padding(6.dp),
         ) {
             HeroStat("${stats.configuredGestures}", stringResource(R.string.compose_stat_gestures), Modifier.weight(1f))
-            HeroStat("${stats.keyCount}", stringResource(R.string.compose_stat_keys), Modifier.weight(1f))
-            HeroStat("${stats.frozenApps}", stringResource(R.string.compose_stat_frozen), Modifier.weight(1f))
         }
     }
 }
@@ -226,29 +216,11 @@ private fun HomeTiles(state: HomeUiState, callbacks: HomeCallbacks) {
     ) {
         TileRow {
             FeatureTile(
-                title = stringResource(R.string.menu_gestures),
-                meta = if (state.gesturesEnabled) stringResource(R.string.compose_home_gesture_meta, state.stats.activeZones) else stringResource(R.string.compose_disabled),
+                title = stringResource(R.string.header_multitouch_gestures),
+                meta = if (state.gesturesEnabled) stringResource(R.string.compose_home_gesture_meta, state.stats.configuredGestures) else stringResource(R.string.compose_disabled),
                 icon = EdgeXIcons.Gesture,
-                onClick = { callbacks.openRoute(EdgeXRoute.Gestures) },
+                onClick = { callbacks.openRoute(EdgeXRoute.MultiTouchGestures) },
                 tag = "home_tile_gestures",
-                modifier = Modifier.weight(1f),
-            )
-            FeatureTile(
-                title = stringResource(R.string.menu_keys),
-                meta = if (state.keysEnabled) stringResource(R.string.compose_home_key_meta, state.stats.keyCount) else stringResource(R.string.compose_disabled),
-                icon = EdgeXIcons.Keys,
-                onClick = { callbacks.openRoute(EdgeXRoute.Keys) },
-                tag = "home_tile_keys",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        TileRow {
-            FeatureTile(
-                title = stringResource(R.string.menu_freezer),
-                meta = stringResource(R.string.compose_home_freezer_meta, state.stats.frozenApps),
-                icon = EdgeXIcons.Freeze,
-                onClick = { callbacks.openRoute(EdgeXRoute.Freezer) },
-                tag = "home_tile_freezer",
                 modifier = Modifier.weight(1f),
             )
             FeatureTile(
@@ -453,17 +425,8 @@ private fun HapticFeedbackTypeSheet(
 }
 
 @Composable
-private fun AboutSettings(callbacks: HomeCallbacks, premiumStatus: PremiumActivator.Status) {
+private fun AboutSettings(callbacks: HomeCallbacks) {
     EdgeXListGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
-        EdgeXRow(
-            title = stringResource(R.string.compose_about_support_author),
-            subtitle = premiumSubtitleText(premiumStatus),
-            icon = EdgeXIcons.Sparkle,
-            onClick = { callbacks.openRoute(EdgeXRoute.Premium) },
-        ) {
-            EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = LocalEdgeXColors.current.onSurfaceDim)
-        }
-        EdgeXDivider()
         EdgeXRow(
             title = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}",
             subtitle = stringResource(R.string.value_project_url),
@@ -474,14 +437,3 @@ private fun AboutSettings(callbacks: HomeCallbacks, premiumStatus: PremiumActiva
         }
     }
 }
-
-@Composable
-private fun premiumSubtitleText(status: PremiumActivator.Status): String =
-    when (status) {
-        PremiumActivator.Status.NotActivated ->
-            stringResource(R.string.compose_premium_subtitle_inactive)
-        PremiumActivator.Status.RebootRequired ->
-            stringResource(R.string.compose_premium_subtitle_reboot)
-        PremiumActivator.Status.Installed ->
-            stringResource(R.string.compose_premium_subtitle_active)
-    }
