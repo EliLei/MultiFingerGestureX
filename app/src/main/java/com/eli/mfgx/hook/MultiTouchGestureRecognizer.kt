@@ -45,10 +45,38 @@ internal object MultiTouchGestureRecognizer {
         }
         if (!hasLarge) return null
 
-        // 互斥：先滑动，后捏合
-        detectSwipe(pointers)?.let { return Result(pointers.size, it) }
+        // 互斥：先滑动（上/下再做速度分支），后捏合
+        detectSwipe(pointers)?.let { swipe ->
+            return Result(pointers.size, resolveQuickSwipe(swipe, pointers, endTimeMs, speedThreshold))
+        }
         detectPinch(pointers, refX, refY)?.let { return Result(pointers.size, it) }
         return null
+    }
+
+    /** 上/下滑且平均速度达标 → QUICK 变体；其余方向原样返回。 */
+    private fun resolveQuickSwipe(
+        swipe: MultiTouchGestureType,
+        pointers: List<PointerSnapshot>,
+        endTimeMs: Long,
+        speedThreshold: Float,
+    ): MultiTouchGestureType {
+        if (swipe != MultiTouchGestureType.SWIPE_UP && swipe != MultiTouchGestureType.SWIPE_DOWN) {
+            return swipe
+        }
+        val windowStart = pointers.minOf { it.startTimeMs }
+        val durationMs = (endTimeMs - windowStart).coerceAtLeast(1L)
+        val meanDisplacement = pointers.sumOf {
+            val dx = (it.currentX - it.startX).toDouble()
+            val dy = (it.currentY - it.startY).toDouble()
+            sqrt(dx * dx + dy * dy)
+        }.toFloat() / pointers.size
+        val speed = meanDisplacement / durationMs.toFloat() // px/ms
+        return if (speed >= speedThreshold) {
+            if (swipe == MultiTouchGestureType.SWIPE_UP) MultiTouchGestureType.QUICK_SWIPE_UP
+            else MultiTouchGestureType.QUICK_SWIPE_DOWN
+        } else {
+            swipe
+        }
     }
 
     private fun detectSwipe(pointers: List<PointerSnapshot>): MultiTouchGestureType? {
