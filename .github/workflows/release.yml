@@ -66,7 +66,7 @@ jobs:
         id: apk
         run: |
           APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          NEW_NAME="EdgeX-v${{ steps.version.outputs.name }}-${{ steps.date.outputs.date }}.apk"
+          NEW_NAME="MultiFingerGestureX-v${{ steps.version.outputs.name }}-${{ steps.date.outputs.date }}.apk"
           NEW_PATH="app/build/outputs/apk/release/$NEW_NAME"
           mv "$APK_PATH" "$NEW_PATH"
           echo "path=$NEW_PATH" >> $GITHUB_OUTPUT

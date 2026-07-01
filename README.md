@@ -1,9 +1,9 @@
-# EdgeX
+# MultiFingerGestureX
 
-> A tribute to Xposed Edge. EdgeX is an LSPosed/Xposed edge gesture module for Android 15+ that hooks system input and SystemUI so edge gestures, hardware keys, and common Android actions can be configured in one place.
+> A multi-touch gesture module for Android 15+ based on LSPosed/Xposed. Intercept 3/4/5-finger swipe and pinch gestures to trigger configurable system actions.
 
 <p align="center">
-  <img src="docs/icon/logo.png" alt="EdgeX Logo" width="220" />
+  <img src="docs/icon/logo.png" alt="MFGX Logo" width="220" />
 </p>
 
 <p align="center">
@@ -16,39 +16,28 @@
   <strong><a href="README_CN.md">中文</a></strong>
 </p>
 
-## Preview
-
-<p align="center">
-  <img src="docs/gif/preview_1.gif" alt="EdgeX preview 1" height="340" />
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/gif/preview_2.gif" alt="EdgeX preview 2" height="340" />
-</p>
-
 ## Overview
 
-EdgeX is not a regular floating-window utility. The app process is only the configuration surface; the module logic runs entirely inside the `system_server` process injected by LSPosed/Xposed:
+MultiFingerGestureX is not a regular floating-window utility. The app process is only the configuration surface; the module logic runs entirely inside the `system_server` process injected by LSPosed/Xposed:
 
-- `android` (system_server): edge touch handling, hardware key interception, all action dispatch, freezer drawer, clipboard history overlay, universal copy overlay, and other system-side surfaces.
-- `com.fan.edgex`: settings UI and cross-process configuration storage.
+- `android` (system_server): multi-touch gesture detection, event interception and replay, action dispatch.
+- `com.eli.mfgx`: settings UI and cross-process configuration storage.
 
-It is intended for rooted LSPosed users who want Xposed Edge-style shortcuts on modern Android: Back, Home, Recents, screenshots, app launch, app shortcuts, shell commands, freezer drawer, clipboard history, universal copy, and more.
+It is intended for rooted LSPosed users who want to trigger actions with multi-finger gestures: Back, Home, Recents, screenshots, app launch, app shortcuts, shell commands, pie menu, custom panels, side bars, and more.
 
 ## Features
 
-- **Edge gestures**: segmented left, right, top, and bottom edge zones, plus full-edge low-priority zones.
-- **Gesture events**: single tap, double tap, long press, and directional swipes.
-- **Hardware keys**: configure click, double-click, and long-press actions for Volume Up, Volume Down, and Power.
+- **Multi-touch gestures**: 3, 4, and 5-finger gestures with 6 gesture types per finger count.
+- **Gesture types**: Swipe Up, Swipe Down, Swipe Left, Swipe Right, Pinch In, Pinch Out.
+- **Configurable thresholds**: Small threshold (minimum movement) and large threshold (confirmation threshold) in pixels.
+- **Per-gesture enable/disable**: Each finger count × gesture type combination can be independently enabled.
+- **Per-gesture action binding**: Each enabled gesture binds to a configurable action.
 - **System actions**: Back, Home, Recents, notifications, lock screen, screenshot, volume, brightness, and more.
-- **Apps and shortcuts**: launch selected apps or app shortcuts, with a root fallback for restricted shortcut discovery.
-- **Pie and custom panels**: open radial Pie menus or custom panels from gestures and keys.
-- **Action workflows**: save multiple-action combinations and run conditional actions for more flexible automation.
-- **App switching**: switch directly to the previous or next recent app.
-- **Freezer drawer**: manage frozen apps, open a side drawer, unfreeze and launch apps, then refreeze them.
-- **Clipboard history**: show the last 50 clipboard entries in a bottom-sheet overlay; tap any entry to inject it into the focused field, or delete individual entries.
-- **Universal copy**: collect accessible text from the current screen and copy selected text blocks from an overlay.
-- **Shell commands**: bind custom commands to gestures or keys, with optional `su` execution.
-- **Media controls**: play/pause, stop, previous track, and next track.
-- **Debug and theming**: gesture-zone debug overlay, SystemUI restart shortcut, haptic feedback on action trigger, and configurable accent colors.
+- **Apps and shortcuts**: Launch selected apps or app shortcuts.
+- **Pie and custom panels**: Open radial Pie menus or custom panels from gestures.
+- **Action workflows**: Save multiple-action combinations and run conditional actions.
+- **Shell commands**: Bind custom commands with optional `su` execution.
+- **Theming**: Configurable accent colors and dark mode.
 
 ## Requirements
 
@@ -58,27 +47,19 @@ It is intended for rooted LSPosed users who want Xposed Edge-style shortcuts on 
 - Required LSPosed scope:
   - `android` / System Framework (system_server)
 
-### Root Notes
-
-- Freezing and unfreezing apps usually requires Root. EdgeX uses framework access where possible and falls back to `su`-backed flows where needed.
-- App shortcuts are loaded through Android APIs first. If access is restricted, EdgeX may use `dumpsys shortcut`, which usually requires Root.
-- Shell commands only need Root when the command itself needs it or when the action is configured to run through `su`.
-- ROM changes, SELinux policy, and LSPosed runtime behavior can affect individual actions.
-
 ## Installation
 
-1. Install the EdgeX APK.
-2. Enable EdgeX in LSPosed.
+1. Install the MultiFingerGestureX APK.
+2. Enable MultiFingerGestureX in LSPosed.
 3. Select the `android` (System Framework) scope.
 4. Reboot the device. A full reboot is recommended after first activation or scope changes.
-5. Open EdgeX, enable gestures or keys, and assign actions.
+5. Open MultiFingerGestureX, enable gestures, and assign actions per finger count and gesture type.
 
 ## Usage Tips
 
-- Turn on debug mode first if you want to verify where edge zones are being detected.
+- Enable debug mode first if you want to verify gesture detection in real time.
 - If gestures do not trigger, check the LSPosed scopes, module enablement, and whether the device was rebooted after enabling the module.
-- If freezer or shortcut fallback actions fail, check `su` authorization and your root manager logs.
-- Use the in-app SystemUI restart entry after changing SystemUI-side behavior.
+- Use the in-app SystemUI restart entry after changing hook-side behavior.
 
 ## Tested Environment
 
@@ -87,8 +68,6 @@ It is intended for rooted LSPosed users who want Xposed Edge-style shortcuts on 
 | Pixel 9                | 16      | [`LSPosed 1.9.2-it(7455)`](https://github.com/LSPosed/Lsposed) | [KernelSU](https://github.com/tiann/KernelSU) |
 | Android Virtual Device | 16      | [`Vector 2.0(3021)`](https://github.com/JingMatrix/Vector)     | [Magisk](https://github.com/topjohnwu/Magisk) |
 
-This is the currently verified development setup, not a strict compatibility limit. Other devices and ROMs may require additional adaptation.
-
 ## Reporting Issues
 
 Useful issue details:
@@ -96,16 +75,12 @@ Useful issue details:
 - Device model, Android version, and ROM.
 - LSPosed / Xposed version.
 - Enabled scopes.
-- Trigger path, for example `Mid-Right Edge, Swipe Left`.
+- Trigger path, for example `4-finger Swipe Up`.
 - Xposed logs and reproduction steps.
-
-## Support
-
-If you find EdgeX useful, you can support development via [Ko-fi](https://ko-fi.com/fantasy1999).
 
 ## Credits
 
-EdgeX is inspired by the interaction model of Xposed Edge and reimplements the core ideas for Android 15+ and current LSPosed environments.
+MultiFingerGestureX is a redesign of EdgeX (originally inspired by Xposed Edge), rebuilt to focus on multi-touch gesture recognition for Android 15+.
 
 ## License
 
