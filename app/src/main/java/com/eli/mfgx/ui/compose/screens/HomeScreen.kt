@@ -367,14 +367,6 @@ private fun AdvancedSettings(state: HomeUiState, callbacks: HomeCallbacks) {
             )
         }
         EdgeXDivider()
-        EdgeXSwitchRow(
-            title = stringResource(R.string.menu_arc_drawer),
-            subtitle = stringResource(R.string.compose_arc_drawer_desc),
-            checked = state.arcDrawer,
-            onCheckedChange = callbacks.setArcDrawer,
-            icon = EdgeXIcons.ArcDrawer,
-        )
-        EdgeXDivider()
         EdgeXRow(
             title = stringResource(R.string.menu_restart_sysui),
             subtitle = stringResource(R.string.compose_restart_sysui_desc),

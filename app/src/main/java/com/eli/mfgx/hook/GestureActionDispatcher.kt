@@ -111,35 +111,6 @@ internal class GestureActionDispatcher(
         val bound = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
         if (bound) serviceBound = true
     }
-    fun triggerGestureAction(
-        zone: String,
-        gestureType: String,
-        context: Context,
-        touchX: Float,
-        touchY: Float,
-    ) {
-        val configKey = AppConfig.gestureAction(zone, gestureType)
-        var action = resolveConfig(configKey)
-
-        // If not found in the specific zone, check the fallback zone.
-        // This mirrors the resolveAction() fallback in GestureManager so that a touch
-        // landing in an enabled specific zone (e.g. "right_mid") can still execute an
-        // action that was configured on the full-edge fallback zone (e.g. "right").
-        if (action.isEmpty() || action == "none") {
-            val fallbackZone = AppConfig.fallbackEdgeZone(zone)
-            if (fallbackZone != null) {
-                action = resolveConfig(AppConfig.gestureAction(fallbackZone, gestureType))
-            }
-        }
-
-        log("[Gesture] triggerAction key=$configKey action='$action'")
-        if (action.isNotEmpty() && action != "none") {
-            handlerProvider().post {
-                performAction(action, context, touchX, touchY)
-            }
-        }
-    }
-
     fun executeKeyAction(action: String, context: Context) {
         handlerProvider().post {
             performAction(action, context, 0f, 0f)
@@ -238,9 +209,6 @@ internal class GestureActionDispatcher(
             action == AppConfig.PARTIAL_SCREENSHOT_ACTION -> {
                 PartialScreenshotOverlay.show(context)
             }
-            action == "refreeze" -> {
-                performRefreeze(context)
-            }
             action.startsWith("shell:") -> {
                 doExecuteShellCommand(action, context)
             }
@@ -249,9 +217,6 @@ internal class GestureActionDispatcher(
             }
             action.startsWith("launch_app:") -> {
                 launchApp(context, action)
-            }
-            action == "freezer_drawer" -> {
-                DrawerManager.showDrawer(context, resolveConfig)
             }
             action == AppConfig.CUSTOM_PANEL_ACTION -> {
                 PanelOverlayManager.showCustomPanel(context, resolveConfig) { selected ->
@@ -717,86 +682,6 @@ internal class GestureActionDispatcher(
         return runCatching {
             XposedHelpers.callStaticMethod(UserHandle::class.java, "of", currentUserId) as UserHandle
         }.getOrDefault(android.os.Process.myUserHandle())
-    }
-
-    private fun performRefreeze(context: Context) {
-        val handler = Handler(Looper.getMainLooper())
-        Thread {
-            try {
-                val pm = context.packageManager
-                val packageSet = linkedSetOf<String>()
-                val listStr = readConfigValue(context, AppConfig.FREEZER_APP_LIST)
-                if (listStr.isNotEmpty()) {
-                    packageSet.addAll(
-                        listStr.split(",")
-                            .map { pkg -> pkg.trim() }
-                            .filter { pkg -> pkg.isNotEmpty() },
-                    )
-                }
-
-                if (packageSet.isEmpty()) {
-                    handler.post {
-                        Toast.makeText(
-                            context,
-                            ModuleRes.getString(R.string.toast_freezer_list_empty),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                    return@Thread
-                }
-
-                var count = 0
-                for (pkg in packageSet) {
-                    try {
-                        val info = pm.getApplicationInfo(pkg, 0)
-                        if (info.enabled) {
-                            var success = false
-                            try {
-                                pm.setApplicationEnabledSetting(
-                                    pkg,
-                                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                                    0,
-                                )
-                                success = true
-                            } catch (e: Exception) {
-                                XposedBridge.log("EdgeX: PM API freeze FAILED for $pkg: ${e.message}")
-                            }
-                            if (success) count++
-                        }
-                    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                if (count > 0) {
-                    handler.post {
-                        Toast.makeText(
-                            context,
-                            ModuleRes.getString(R.string.toast_refrozen_apps, count),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                } else {
-                    handler.post {
-                        Toast.makeText(
-                            context,
-                            ModuleRes.getString(R.string.toast_no_apps_to_freeze),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                handler.post {
-                    Toast.makeText(
-                        context,
-                        ModuleRes.getString(R.string.toast_freeze_error, e.message),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
-        }.start()
     }
 
     private fun clearBackgroundApps(context: Context) {

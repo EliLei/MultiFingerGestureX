@@ -15,7 +15,6 @@ import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.configPrefs
 import com.eli.mfgx.config.putConfig
 import com.eli.mfgx.hook.MultiTouchGestureType
-import com.eli.mfgx.ui.compose.components.ActionSelectionSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,23 +143,6 @@ fun MultiTouchGesturesScreen(
         }
     }
 
-    // Action selection sheet
-    showActionSheet?.let { (count, type) ->
-        ActionSelectionSheet(
-            title = gestureTitleFor(context, type),
-            currentAction = prefs.getString(AppConfig.gestureActionKey(count, type), "none"),
-            onDismiss = { showActionSheet = null },
-            onActionSelected = { action ->
-                context.putConfig(AppConfig.gestureActionKey(count, type), action)
-                val idx = AppConfig.MULTI_TOUCH_GESTURE_TYPES.indexOf(type)
-                if (idx >= 0) {
-                    val (t, enabled, _) = gestureStates[idx]
-                    gestureStates[idx] = Triple(t, enabled, action)
-                }
-                showActionSheet = null
-            },
-        )
-    }
 }
 
 @Composable

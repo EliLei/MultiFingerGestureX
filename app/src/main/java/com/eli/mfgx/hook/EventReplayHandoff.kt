@@ -128,14 +128,13 @@ internal class EventReplayHandoff(
             rec.downTime,
             eventTime,
             actionMasked,
-            actionIndex,
             rec.pointers.size,
             props,
             coords,
             rec.metaState,
             1f, // buttonState
             1f, // xPrecision
-            1f, // yPrecision
+            1f, // yPrecision,
             0, // deviceId
             0, // edgeFlags
             InputDevice.SOURCE_TOUCHSCREEN, // source

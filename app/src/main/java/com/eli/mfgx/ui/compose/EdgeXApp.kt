@@ -8,9 +8,14 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.eli.mfgx.BuildConfig
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.ModuleActivationState
@@ -29,17 +36,14 @@ import com.eli.mfgx.config.configPrefs
 import com.eli.mfgx.config.getConfigBool
 import com.eli.mfgx.config.getConfigString
 import com.eli.mfgx.config.putConfig
+import com.eli.mfgx.ui.compose.components.EdgeXIcon
+import com.eli.mfgx.ui.compose.components.EdgeXIcons
+import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.components.EdgeXToast
 import com.eli.mfgx.ui.compose.components.UpdateDialog
-import com.eli.mfgx.ui.compose.screens.AboutScreen
 import com.eli.mfgx.ui.compose.screens.HomeCallbacks
 import com.eli.mfgx.ui.compose.screens.HomeScreen
 import com.eli.mfgx.ui.compose.screens.MultiTouchGesturesScreen
-import com.eli.mfgx.ui.compose.screens.MultiScreen
-import com.eli.mfgx.ui.compose.screens.PieScreen
-import com.eli.mfgx.ui.compose.screens.CustomPanelScreen
-import com.eli.mfgx.ui.compose.screens.SideBarScreen
-import com.eli.mfgx.ui.compose.screens.ThemeScreen
 import com.eli.mfgx.ui.compose.theme.EdgeXAccent
 import com.eli.mfgx.ui.compose.theme.EdgeXTheme
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
@@ -50,11 +54,6 @@ import kotlinx.coroutines.delay
 enum class EdgeXRoute(@StringRes val labelRes: Int) {
     Home(R.string.compose_route_home),
     MultiTouchGestures(R.string.header_multitouch_gestures),
-    Pie(R.string.header_pie_settings),
-    CustomPanel(R.string.menu_custom_panel),
-    SideBar(R.string.menu_side_bar),
-    Multi(R.string.menu_multi_actions),
-    Theme(R.string.header_theme),
     About(R.string.menu_about),
 }
 
@@ -106,9 +105,8 @@ fun EdgeXApp() {
     }
 
     fun checkForUpdates() {
-        val activity = context as? Activity ?: return
         showToast(updateChecking)
-        UpdateChecker.checkNow(activity) { release ->
+        UpdateChecker.checkNow(context as Activity) { release ->
             if (release == null) {
                 showToast(updateAlreadyLatest)
             } else {
@@ -125,9 +123,7 @@ fun EdgeXApp() {
     }
 
     LaunchedEffect(Unit) {
-        (context as? Activity).let { activity ->
-            UpdateChecker.checkOnLaunch(activity) { availableUpdate = it }
-        }
+        UpdateChecker.checkOnLaunch(context as Activity) { availableUpdate = it }
         ModuleActivationState.requestRefresh(context)
         delay(350)
         refresh()
@@ -137,8 +133,7 @@ fun EdgeXApp() {
         val colors = LocalEdgeXColors.current
         BackHandler(enabled = stack.size > 1) {
             when (stack.last()) {
-                EdgeXRoute.MultiTouchGestures,
-                EdgeXRoute.Theme -> popRouteAndRefresh()
+                EdgeXRoute.MultiTouchGestures -> popRouteAndRefresh()
                 else -> popRoute()
             }
         }
@@ -175,30 +170,12 @@ fun EdgeXApp() {
                                 refresh()
                             },
                             setArcDrawer = {
-                                // No longer applicable; kept for interface compatibility
+                                // No longer applicable
                             },
                         ),
                     )
                     EdgeXRoute.MultiTouchGestures -> MultiTouchGesturesScreen(
                         onBack = ::popRouteAndRefresh,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.Pie -> PieScreen(
-                        onBack = ::popRoute,
-                    )
-                    EdgeXRoute.CustomPanel -> CustomPanelScreen(
-                        onBack = ::popRoute,
-                    )
-                    EdgeXRoute.SideBar -> SideBarScreen(
-                        onBack = ::popRoute,
-                    )
-                    EdgeXRoute.Multi -> MultiScreen(
-                        onBack = ::popRoute,
-                        showToast = ::showToast,
-                    )
-                    EdgeXRoute.Theme -> ThemeScreen(
-                        onBack = ::popRouteAndRefresh,
-                        onThemeChanged = ::refresh,
                         showToast = ::showToast,
                     )
                     EdgeXRoute.About -> AboutScreen(
@@ -223,6 +200,43 @@ fun EdgeXApp() {
                         availableUpdate = null
                     },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutScreen(
+    onBack: () -> Unit,
+    showToast: (String) -> Unit,
+    onCheckForUpdates: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        EdgeXTopBar(
+            title = stringResource(R.string.menu_about),
+            navigation = { EdgeXIcon(EdgeXIcons.ChevronLeft, contentDescription = null) },
+            onNavigationClick = onBack,
+        )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = "v${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                text = stringResource(R.string.value_project_url),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            TextButton(
+                onClick = onCheckForUpdates,
+                modifier = Modifier.padding(top = 16.dp),
+            ) {
+                Text(stringResource(R.string.update_checking))
             }
         }
     }
