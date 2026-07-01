@@ -1,15 +1,15 @@
 <resources>
-    <string name="app_name">EdgeX</string>
+    <string name="app_name">MultiFingerGestureX</string>
 
     <!-- Screen Headers -->
-    <string name="header_main">EdgeX</string>
+    <string name="header_main">MultiFingerGestureX</string>
+    <string name="header_multitouch_gestures">Multi-Touch Gestures</string>
     <string name="header_gestures">Gestures</string>
     <string name="header_freezer">Freezer</string>
     <string name="header_action_selection">Select Action</string>
     <string name="header_shortcut_selection">Select Shortcut</string>
     <string name="header_theme">Theme</string>
-    <string name="header_edge_lighting">Edge Lighting</string>
-    <string name="header_edge_lighting_app_filter">Edge Lighting Apps</string>
+    <string name="header_thresholds">Thresholds</string>
 
     <!-- Main Screen Menu Items -->
     <string name="menu_gestures">Gestures</string>
@@ -82,8 +82,8 @@
     <string name="label_project_url">Project URL</string>
     <string name="label_version">Version</string>
     <string name="value_author">fantasy1999</string>
-    <string name="value_project_url">github.com/fcmfcm1999/EdgeX</string>
-    <string name="value_version">0.1</string>
+    <string name="value_project_url">github.com/elilee/MultiFingerGestureX</string>
+    <string name="value_version">0.2</string>
 
     <!-- Update Checker -->
     <string name="update_new_version_title">New version %s available</string>
@@ -140,6 +140,18 @@
     <string name="gesture_swipe_down">Swipe Down</string>
     <string name="gesture_swipe_left">Swipe Left</string>
     <string name="gesture_swipe_right">Swipe Right</string>
+    <string name="gesture_pinch_in">Pinch In</string>
+    <string name="gesture_pinch_out">Pinch Out</string>
+
+    <!-- Multi-Touch Gesture Tabs -->
+    <string name="tab_3_fingers">3 Fingers</string>
+    <string name="tab_4_fingers">4 Fingers</string>
+    <string name="tab_5_fingers">5 Fingers</string>
+
+    <!-- Threshold Labels -->
+    <string name="label_small_threshold">Small Threshold</string>
+    <string name="label_large_threshold">Large Threshold</string>
+    <string name="action_not_set">Not set</string>
 
     <!-- Action Selection Items -->
     <string name="action_none">None</string>
@@ -474,16 +486,16 @@
     <string name="compose_more">More</string>
     <string name="compose_info">Info</string>
     <string name="compose_edit">Edit</string>
-    <string name="compose_app_subtitle">Edge Gestures · Smart Interaction</string>
+    <string name="compose_app_subtitle">Multi-Touch Gestures · Custom Actions</string>
     <string name="compose_route_home">Home</string>
     <string name="compose_module_active">Module Active</string>
     <string name="compose_module_inactive">Not Activated</string>
-    <string name="compose_home_hero_title">Your Gestures\nControl Everything</string>
-    <string name="compose_home_hero_subtitle">%1$d gesture actions configured · %2$d/16 zones active</string>
+    <string name="compose_home_hero_title">Multi-Finger\nGesture Control</string>
+    <string name="compose_home_hero_subtitle">%1$d gesture actions configured</string>
     <string name="compose_stat_gestures">Gestures</string>
     <string name="compose_stat_frozen">Freezer Drawer</string>
     <string name="compose_stat_keys">Keys</string>
-    <string name="compose_home_gesture_meta">%d zones enabled</string>
+    <string name="compose_home_gesture_meta">%d gestures configured</string>
     <string name="compose_home_key_meta">%d keys enabled</string>
     <string name="compose_home_freezer_meta">%d apps in freezer drawer</string>
     <string name="compose_enabled">Enabled</string>
@@ -610,7 +622,7 @@
     <string name="compose_developer">Developer</string>
     <string name="compose_debug_logs">Debug Logs</string>
     <string name="compose_coming_soon">Coming soon</string>
-    <string name="compose_about_description">Edge gesture control module based on Xposed framework</string>
+    <string name="compose_about_description">Multi-touch gesture control module based on Xposed framework</string>
     <string name="compose_version_info">v%1$s · 2026</string>
     <string name="compose_build_info">Build %1$d · %2$s</string>
 
