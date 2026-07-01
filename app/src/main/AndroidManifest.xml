@@ -43,17 +43,6 @@
         </activity>
         
         <activity
-            android:name=".ui.GesturesActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.FreezerActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX"
-            android:windowSoftInputMode="adjustResize"/>
-
-        <activity
             android:name=".ui.ThemeActivity"
             android:exported="false"
             android:theme="@style/Theme.EdgeX" />
@@ -73,16 +62,6 @@
             android:exported="false"
             android:theme="@style/Theme.EdgeX"
             android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".ui.KeysActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.SubGestureActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
 
         <activity
             android:name=".ui.AppSelectionActivity"

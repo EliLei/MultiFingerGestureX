@@ -53,8 +53,10 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
           else
             echo "No release keystore secret found, generating debug keystore"
-            mkdir -p ~/.android
+            # Generate in both possible locations AGP may look for it
+            mkdir -p ~/.android ~/.config/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+            cp ~/.android/debug.keystore ~/.config/.android/debug.keystore 2>/dev/null || true
           fi
 
       - name: Build Release APK
