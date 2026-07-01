@@ -27,7 +27,6 @@ import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.HookConfigSnapshot
 import com.eli.mfgx.ui.ThemeManager
-import com.eli.mfgx.overlay.DrawerManager
 import com.eli.mfgx.overlay.PanelOverlayManager
 import com.eli.mfgx.overlay.PieManager
 import com.eli.mfgx.overlay.PieView
