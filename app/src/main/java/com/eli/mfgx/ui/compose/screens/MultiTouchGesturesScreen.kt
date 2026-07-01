@@ -328,6 +328,22 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             )?.toIntOrNull() ?: AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT
         )
     }
+    var waitingTimeout by remember {
+        mutableStateOf(
+            prefs.getString(
+                AppConfig.GESTURE_WAITING_TIMEOUT_MS,
+                AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
+            )?.toIntOrNull() ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT
+        )
+    }
+    var speedThreshold by remember {
+        mutableStateOf(
+            prefs.getString(
+                AppConfig.GESTURE_SPEED_THRESHOLD,
+                AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
+            )?.toFloatOrNull() ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT
+        )
+    }
 
     Text(
         text = stringResource(R.string.header_thresholds),
@@ -378,6 +394,50 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             )
         }
     }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "${stringResource(R.string.label_waiting_timeout)}: $waitingTimeout ms",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = waitingTimeout.toFloat(),
+                onValueChange = { value ->
+                    waitingTimeout = value.toInt()
+                    context.putConfig(AppConfig.GESTURE_WAITING_TIMEOUT_MS, waitingTimeout.toString())
+                },
+                valueRange = 50f..500f,
+                onValueChangeFinished = {},
+            )
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "${stringResource(R.string.label_speed_threshold)}: %.1f px/ms".format(speedThreshold),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = speedThreshold,
+                onValueChange = { value ->
+                    speedThreshold = value
+                    context.putConfig(AppConfig.GESTURE_SPEED_THRESHOLD, speedThreshold.toString())
+                },
+                valueRange = 0.5f..5.0f,
+                onValueChangeFinished = {},
+            )
+        }
+    }
 }
 
 private fun actionLabel(context: Context, action: String): String {
@@ -396,6 +456,8 @@ private fun gestureTitleFor(context: Context, type: String): String {
         MultiTouchGestureType.SWIPE_RIGHT -> context.getString(R.string.gesture_swipe_right)
         MultiTouchGestureType.PINCH_IN -> context.getString(R.string.gesture_pinch_in)
         MultiTouchGestureType.PINCH_OUT -> context.getString(R.string.gesture_pinch_out)
+        MultiTouchGestureType.QUICK_SWIPE_UP -> context.getString(R.string.gesture_quick_swipe_up)
+        MultiTouchGestureType.QUICK_SWIPE_DOWN -> context.getString(R.string.gesture_quick_swipe_down)
         null -> type
     }
 }
