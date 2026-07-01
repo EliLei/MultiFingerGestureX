@@ -214,8 +214,7 @@ private fun AboutScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         EdgeXTopBar(
             title = stringResource(R.string.menu_about),
-            navigation = { EdgeXIcon(EdgeXIcons.ChevronLeft, contentDescription = null) },
-            onNavigationClick = onBack,
+            onBack = onBack,
         )
         Column(modifier = Modifier.padding(16.dp)) {
             Text(

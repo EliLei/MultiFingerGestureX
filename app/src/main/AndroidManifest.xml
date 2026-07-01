@@ -25,7 +25,7 @@
                 android:value="true" />
         <meta-data
                 android:name="xposeddescription"
-                android:value="Gesture Control Module" />
+                android:value="Multi-touch gesture control module" />
         <meta-data
                 android:name="xposedminversion"
                 android:value="82" />
@@ -41,76 +41,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <activity
-            android:name=".ui.ThemeActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.ActionSelectionActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.ShortcutSelectionActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.ShellCommandActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".ui.AppSelectionActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.MusicControlActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.FastScrollActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.PieSettingsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.MultiActionsListActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.MultiActionEditActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX"
-            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".ui.AppIconPickerActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-                android:name=".ui.PanelConfigActivity"
-                android:exported="false"
-                android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.ConditionActionActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.ConditionPickerActivity"
             android:exported="false"
             android:theme="@style/Theme.EdgeX" />
 

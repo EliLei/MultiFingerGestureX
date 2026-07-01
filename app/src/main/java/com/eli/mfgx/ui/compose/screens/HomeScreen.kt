@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.ui.compose.EdgeXRoute
+import com.eli.mfgx.ui.compose.HomeStats
+import com.eli.mfgx.ui.compose.HomeUiState
 import com.eli.mfgx.ui.compose.HomeUiState
 import com.eli.mfgx.ui.compose.components.EdgeXBottomSheet
 import com.eli.mfgx.ui.compose.components.EdgeXDivider
@@ -221,50 +223,6 @@ private fun HomeTiles(state: HomeUiState, callbacks: HomeCallbacks) {
                 icon = EdgeXIcons.Gesture,
                 onClick = { callbacks.openRoute(EdgeXRoute.MultiTouchGestures) },
                 tag = "home_tile_gestures",
-                modifier = Modifier.weight(1f),
-            )
-            FeatureTile(
-                title = stringResource(R.string.header_pie_settings),
-                meta = stringResource(R.string.compose_home_pie_meta),
-                icon = EdgeXIcons.Pie,
-                onClick = { callbacks.openRoute(EdgeXRoute.Pie) },
-                tag = "home_tile_pie",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        TileRow {
-            FeatureTile(
-                title = stringResource(R.string.menu_custom_panel),
-                meta = stringResource(R.string.compose_home_custom_panel_meta),
-                icon = EdgeXIcons.CustomPanel,
-                onClick = { callbacks.openRoute(EdgeXRoute.CustomPanel) },
-                tag = "home_tile_custom_panel",
-                modifier = Modifier.weight(1f),
-            )
-            FeatureTile(
-                title = stringResource(R.string.menu_side_bar),
-                meta = stringResource(R.string.compose_home_side_bar_meta),
-                icon = EdgeXIcons.SideBar,
-                onClick = { callbacks.openRoute(EdgeXRoute.SideBar) },
-                tag = "home_tile_side_bar",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        TileRow {
-            FeatureTile(
-                title = stringResource(R.string.action_multi_action),
-                meta = stringResource(R.string.compose_home_multi_meta),
-                icon = EdgeXIcons.Multi,
-                onClick = { callbacks.openRoute(EdgeXRoute.Multi) },
-                tag = "home_tile_multi",
-                modifier = Modifier.weight(1f),
-            )
-            FeatureTile(
-                title = stringResource(R.string.header_theme),
-                meta = stringResource(R.string.compose_home_theme_meta),
-                icon = EdgeXIcons.Theme,
-                onClick = { callbacks.openRoute(EdgeXRoute.Theme) },
-                tag = "home_tile_theme",
                 modifier = Modifier.weight(1f),
             )
         }
