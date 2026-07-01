@@ -241,21 +241,6 @@ internal class GestureActionDispatcher(
             action == "refreeze" -> {
                 performRefreeze(context)
             }
-            action == "universal_copy" -> {
-                UniversalCopyManager.collectAllTexts(context) { result ->
-                    when (result.status) {
-                        UniversalCopyManager.CollectStatus.FOUND -> {
-                            TextSelectionOverlay.show(context, result.blocks)
-                        }
-                        UniversalCopyManager.CollectStatus.NO_TEXT -> {
-                            showToast(context, ModuleRes.getString(R.string.toast_no_text_found))
-                        }
-                        UniversalCopyManager.CollectStatus.UNAVAILABLE -> {
-                            showToast(context, ModuleRes.getString(R.string.toast_copy_unavailable))
-                        }
-                    }
-                }
-            }
             action.startsWith("shell:") -> {
                 doExecuteShellCommand(action, context)
             }
@@ -264,9 +249,6 @@ internal class GestureActionDispatcher(
             }
             action.startsWith("launch_app:") -> {
                 launchApp(context, action)
-            }
-            action == "clipboard" -> {
-                ClipboardOverlay.show(context)
             }
             action == "freezer_drawer" -> {
                 DrawerManager.showDrawer(context, resolveConfig)
@@ -292,17 +274,11 @@ internal class GestureActionDispatcher(
             action.startsWith("condition:") -> {
                 executeConditionAction(action, context, touchX, touchY)
             }
-            action == "toggle_flashlight" -> {
-                FlashlightManager.toggle(context, handlerProvider())
-            }
             action == "toggle_wifi" -> {
                 toggleWifi(context)
             }
             action == "toggle_mobile_data" -> {
                 toggleMobileData(context)
-            }
-            action == "game_mode" -> {
-                GameModeManager.enable(context, handlerProvider())
             }
         }
     }
@@ -997,7 +973,6 @@ internal class GestureActionDispatcher(
                     Int::class.javaPrimitiveType,
                 )
                 events.forEach { event ->
-                    KeyManager.markInjectedEvent(event)
                     injectMethod.invoke(inputManager, event, 0)
                 }
                 true
