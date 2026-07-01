@@ -1,11 +1,40 @@
 package com.eli.mfgx.ui.compose.screens
 
 import android.content.Context
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -15,6 +44,57 @@ import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.configPrefs
 import com.eli.mfgx.config.putConfig
 import com.eli.mfgx.hook.MultiTouchGestureType
+
+// Self-contained actions only (no secondary editor needed). Each entry maps an
+// action code (as stored in gesture_<count>_<type>_action and consumed by
+// GestureActionDispatcher) to a human-readable label resource.
+private data class ActionOption(val code: String, val labelRes: Int)
+private data class ActionGroup(val titleRes: Int, val options: List<ActionOption>)
+
+private val ACTION_GROUPS = listOf(
+    ActionGroup(R.string.action_section_navigation, listOf(
+        ActionOption("back", R.string.action_back),
+        ActionOption("home", R.string.action_home),
+        ActionOption("recents", R.string.action_recents),
+        ActionOption("expand_notifications", R.string.action_notifications),
+        ActionOption("quick_settings", R.string.action_quick_settings),
+        ActionOption("lock_screen", R.string.action_lock_screen),
+        ActionOption("power_dialog", R.string.action_power_dialog),
+    )),
+    ActionGroup(R.string.action_section_apps, listOf(
+        ActionOption("kill_app", R.string.action_kill_app),
+        ActionOption("prev_app", R.string.action_prev_app),
+        ActionOption("next_app", R.string.action_next_app),
+        ActionOption("clear_background", R.string.action_clear_background),
+        ActionOption("screenshot", R.string.action_screenshot),
+        ActionOption("partial_screenshot", R.string.action_partial_screenshot),
+    )),
+    ActionGroup(R.string.action_section_media, listOf(
+        ActionOption("music_control:play_pause", R.string.action_music_play_pause),
+        ActionOption("music_control:stop", R.string.action_music_stop),
+        ActionOption("music_control:previous", R.string.action_music_previous),
+        ActionOption("music_control:next", R.string.action_music_next),
+    )),
+    ActionGroup(R.string.action_section_scroll, listOf(
+        ActionOption("fast_scroll:to_top", R.string.action_scroll_to_top),
+        ActionOption("fast_scroll:to_bottom", R.string.action_scroll_to_bottom),
+    )),
+    ActionGroup(R.string.action_section_device, listOf(
+        ActionOption("volume_up", R.string.action_volume_up),
+        ActionOption("volume_down", R.string.action_volume_down),
+        ActionOption("brightness_up", R.string.action_brightness_up),
+        ActionOption("brightness_down", R.string.action_brightness_down),
+    )),
+    ActionGroup(R.string.action_section_network, listOf(
+        ActionOption("toggle_wifi", R.string.action_toggle_wifi),
+        ActionOption("toggle_mobile_data", R.string.action_toggle_mobile_data),
+    )),
+)
+
+private val ACTION_LABEL_RES_BY_CODE: Map<String, Int> =
+    ACTION_GROUPS.flatMap { it.options }.associate { it.code to it.labelRes }
+
+private data class EditTarget(val fingerCount: Int, val type: String, val index: Int)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +107,7 @@ fun MultiTouchGesturesScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabFingerCount = AppConfig.MULTI_TOUCH_FINGER_COUNTS[selectedTabIndex]
 
-    // Reload state when tab changes
+    // Reload state when tab changes. Triple = (gestureType, enabled, actionCode).
     val gestureStates = remember(tabFingerCount) {
         AppConfig.MULTI_TOUCH_GESTURE_TYPES.map { type ->
             val enabled = prefs.getString(
@@ -40,7 +120,27 @@ fun MultiTouchGesturesScreen(
         }.toMutableStateList()
     }
 
-    var showActionSheet by remember { mutableStateOf<Pair<Int, String>?>(null) } // (fingerCount, gestureType)
+    var editTarget by remember { mutableStateOf<EditTarget?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun bindAction(code: String) {
+        val target = editTarget ?: return
+        val (_, prevEnabled, _) = gestureStates[target.index]
+        context.putConfig(AppConfig.gestureActionKey(target.fingerCount, target.type), code)
+        // Binding a real action arms the gesture automatically; clearing keeps the switch as-is.
+        val newEnabled = if (code != "none") true else prevEnabled
+        if (newEnabled != prevEnabled) {
+            context.putConfig(
+                AppConfig.gestureEnabledKey(target.fingerCount, target.type), newEnabled.toString()
+            )
+        }
+        gestureStates[target.index] = Triple(target.type, newEnabled, code)
+        val labelRes = ACTION_LABEL_RES_BY_CODE[code]
+        if (code != "none" && labelRes != null) {
+            showToast(context.getString(R.string.compose_set_action_toast, context.getString(labelRes)))
+        }
+        editTarget = null
+    }
 
     Scaffold(
         topBar = {
@@ -84,30 +184,21 @@ fun MultiTouchGesturesScreen(
                     .verticalScroll(rememberScrollState()),
             ) {
                 AppConfig.MULTI_TOUCH_GESTURE_TYPES.forEachIndexed { index, type ->
-                    val gestureType = MultiTouchGestureType.fromKey(type)
-                    val gestureTitle = gestureType?.let {
-                        when (it) {
-                            MultiTouchGestureType.SWIPE_UP -> stringResource(R.string.gesture_swipe_up)
-                            MultiTouchGestureType.SWIPE_DOWN -> stringResource(R.string.gesture_swipe_down)
-                            MultiTouchGestureType.SWIPE_LEFT -> stringResource(R.string.gesture_swipe_left)
-                            MultiTouchGestureType.SWIPE_RIGHT -> stringResource(R.string.gesture_swipe_right)
-                            MultiTouchGestureType.PINCH_IN -> stringResource(R.string.gesture_pinch_in)
-                            MultiTouchGestureType.PINCH_OUT -> stringResource(R.string.gesture_pinch_out)
-                        }
-                    } ?: type
-
+                    val gestureTitle = gestureTitleFor(context, type)
                     val (_, enabled, action) = gestureStates[index]
 
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .clickable { editTarget = EditTarget(tabFingerCount, type, index) },
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -143,6 +234,80 @@ fun MultiTouchGesturesScreen(
         }
     }
 
+    val activeTarget = editTarget
+    if (activeTarget != null) {
+        ModalBottomSheet(
+            onDismissRequest = { editTarget = null },
+            sheetState = sheetState,
+        ) {
+            Text(
+                text = stringResource(R.string.action_dialog_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
+            )
+            ActionPickerContent(
+                currentAction = gestureStates[activeTarget.index].third,
+                onSelect = { code -> bindAction(code) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionPickerContent(
+    currentAction: String,
+    onSelect: (String) -> Unit,
+) {
+    LazyColumn(modifier = Modifier.padding(bottom = 24.dp)) {
+        item(key = "clear") {
+            ActionPickerRow(
+                label = stringResource(R.string.action_clear),
+                selected = currentAction == "none",
+                onClick = { onSelect("none") },
+            )
+        }
+        ACTION_GROUPS.forEach { group ->
+            item(key = "header_${group.titleRes}") {
+                Text(
+                    text = stringResource(group.titleRes),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 24.dp, top = 12.dp, bottom = 4.dp),
+                )
+            }
+            items(group.options, key = { it.code }) { option ->
+                ActionPickerRow(
+                    label = stringResource(option.labelRes),
+                    selected = currentAction == option.code,
+                    onClick = { onSelect(option.code) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionPickerRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Text(
+                text = "✓",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
 
 @Composable
@@ -216,16 +381,15 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
 }
 
 private fun actionLabel(context: Context, action: String): String {
-    return when {
-        action.isBlank() || action == "none" ->
-            context.getString(R.string.action_not_set)
-        else -> action
+    if (action.isBlank() || action == "none") {
+        return context.getString(R.string.action_not_set)
     }
+    val resId = ACTION_LABEL_RES_BY_CODE[action]
+    return if (resId != null) context.getString(resId) else action
 }
 
 private fun gestureTitleFor(context: Context, type: String): String {
-    val gestureType = MultiTouchGestureType.fromKey(type)
-    return when (gestureType) {
+    return when (MultiTouchGestureType.fromKey(type)) {
         MultiTouchGestureType.SWIPE_UP -> context.getString(R.string.gesture_swipe_up)
         MultiTouchGestureType.SWIPE_DOWN -> context.getString(R.string.gesture_swipe_down)
         MultiTouchGestureType.SWIPE_LEFT -> context.getString(R.string.gesture_swipe_left)

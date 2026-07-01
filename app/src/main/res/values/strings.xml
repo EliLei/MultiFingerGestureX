@@ -162,6 +162,17 @@
     <string name="action_refreeze">Refreeze</string>
     <string name="action_screenshot">Screenshot</string>
     <string name="action_partial_screenshot">Partial Screenshot</string>
+    <string name="action_notifications">Notifications</string>
+    <string name="action_quick_settings">Quick Settings</string>
+    <string name="action_power_dialog">Power Menu</string>
+    <string name="action_clear">None</string>
+    <string name="action_dialog_title">Select Action</string>
+    <string name="action_section_navigation">Navigation</string>
+    <string name="action_section_apps">Apps</string>
+    <string name="action_section_media">Media</string>
+    <string name="action_section_scroll">Scroll</string>
+    <string name="action_section_device">Volume &amp; Brightness</string>
+    <string name="action_section_network">Network</string>
     <string name="partial_screenshot_hint">Drag to select area</string>
     <string name="partial_screenshot_capture">Capture</string>
     <string name="partial_screenshot_cancel">Cancel</string>
