@@ -68,7 +68,7 @@
                     android:background="@drawable/bg_edge_lighting_phone_preview"
                     android:clipToOutline="true">
 
-                    <com.fan.edgex.overlay.EdgeLightingView
+                    <com.eli.mfgx.overlay.EdgeLightingView
                         android:id="@+id/preview_lighting_view"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />

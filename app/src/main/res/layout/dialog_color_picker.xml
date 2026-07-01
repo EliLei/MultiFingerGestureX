@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <com.fan.edgex.ui.ColorPickerView
+    <com.eli.mfgx.ui.ColorPickerView
         android:id="@+id/color_picker_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
