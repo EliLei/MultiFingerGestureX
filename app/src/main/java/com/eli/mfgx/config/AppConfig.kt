@@ -148,4 +148,40 @@ object AppConfig {
             ?: return null
         return keyCode to trigger
     }
+
+    // ===== Multi-touch gestures =====
+    val MULTI_TOUCH_FINGER_COUNTS = listOf(3, 4, 5)
+    val MULTI_TOUCH_GESTURE_TYPES = listOf(
+        "swipe_up", "swipe_down", "swipe_left", "swipe_right", "pinch_in", "pinch_out"
+    )
+
+    const val GESTURE_SMALL_THRESHOLD = "gesture_small_threshold"
+    const val GESTURE_LARGE_THRESHOLD = "gesture_large_threshold"
+    const val GESTURE_SMALL_THRESHOLD_DEFAULT = 12
+    const val GESTURE_LARGE_THRESHOLD_DEFAULT = 24
+
+    fun gestureEnabledKey(count: Int, type: String) = "gesture_${count}_${type}_enabled"
+    fun gestureActionKey(count: Int, type: String) = "gesture_${count}_${type}_action"
+    fun gestureActionLabelKey(count: Int, type: String) = "gesture_${count}_${type}_label"
+
+    /** 反解析 gesture_<count>_<type>_(enabled|action|label) → (count, type)，count 不在 3..5 返回 null。 */
+    fun gestureKeyParts(key: String): Pair<Int, String>? {
+        if (!key.startsWith("gesture_")) return null
+        val tail = key.removePrefix("gesture_")
+        // 去掉后缀 _enabled / _action / _label
+        val typeWithCount = when {
+            tail.endsWith("_enabled") -> tail.removeSuffix("_enabled")
+            tail.endsWith("_action") -> tail.removeSuffix("_action")
+            tail.endsWith("_label") -> tail.removeSuffix("_label")
+            else -> return null
+        }
+        // type 可能含下划线（swipe_up, pinch_in），count 是第一段数字
+        val firstUnderscore = typeWithCount.indexOf('_')
+        if (firstUnderscore < 0) return null
+        val count = typeWithCount.substring(0, firstUnderscore).toIntOrNull() ?: return null
+        if (count !in MULTI_TOUCH_FINGER_COUNTS) return null
+        val type = typeWithCount.substring(firstUnderscore + 1)
+        if (type !in MULTI_TOUCH_GESTURE_TYPES) return null
+        return count to type
+    }
 }
