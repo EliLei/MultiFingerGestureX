@@ -29,10 +29,18 @@ class AppConfigMultiTouchTest {
     }
 
     @Test
-    fun supportedGestureTypesAreSix() {
-        assertEquals(6, AppConfig.MULTI_TOUCH_GESTURE_TYPES.size)
+    fun supportedGestureTypesAreEight() {
+        assertEquals(8, AppConfig.MULTI_TOUCH_GESTURE_TYPES.size)
         assertTrue(AppConfig.MULTI_TOUCH_GESTURE_TYPES.contains("swipe_up"))
         assertTrue(AppConfig.MULTI_TOUCH_GESTURE_TYPES.contains("pinch_out"))
+        assertTrue(AppConfig.MULTI_TOUCH_GESTURE_TYPES.contains("quick_swipe_up"))
+        assertTrue(AppConfig.MULTI_TOUCH_GESTURE_TYPES.contains("quick_swipe_down"))
+    }
+
+    @Test
+    fun parseQuickSwipeKey() {
+        assertEquals(3 to "quick_swipe_up", AppConfig.gestureKeyParts("gesture_3_quick_swipe_up_action"))
+        assertEquals(5 to "quick_swipe_down", AppConfig.gestureKeyParts("gesture_5_quick_swipe_down_enabled"))
     }
 
     private fun assertTrue(b: Boolean) = org.junit.Assert.assertTrue(b)
