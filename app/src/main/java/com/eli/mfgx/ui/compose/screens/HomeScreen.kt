@@ -40,7 +40,6 @@ import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.ui.compose.EdgeXRoute
 import com.eli.mfgx.ui.compose.HomeStats
 import com.eli.mfgx.ui.compose.HomeUiState
-import com.eli.mfgx.ui.compose.HomeUiState
 import com.eli.mfgx.ui.compose.components.EdgeXBottomSheet
 import com.eli.mfgx.ui.compose.components.EdgeXDivider
 import com.eli.mfgx.ui.compose.components.EdgeXIcon

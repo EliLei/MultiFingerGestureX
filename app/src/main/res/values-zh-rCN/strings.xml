@@ -8,8 +8,6 @@
     <string name="header_freezer">冰箱</string>
     <string name="header_action_selection">选择动作</string>
     <string name="header_shortcut_selection">选择快捷方式</string>
-    <string name="header_edge_lighting">边缘光效</string>
-    <string name="header_edge_lighting_app_filter">边缘光效应用</string>
 
     <!-- 主界面菜单项 -->
     <string name="menu_gestures">手势</string>
