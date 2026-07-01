@@ -52,7 +52,9 @@ jobs:
             echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> local.properties
             echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
           else
-            echo "Secret KEYSTORE_BASE64 is missing, you must configure secrets in GitHub Repo Settings!"
+            echo "No release keystore secret found, generating debug keystore"
+            mkdir -p ~/.android
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
           fi
 
       - name: Build Release APK
