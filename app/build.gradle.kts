@@ -16,11 +16,6 @@ val localProperties = Properties().apply {
 fun buildConfigString(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val premiumApiUrls = localProperties.getProperty("PREMIUM_API_URLS")
-    ?: System.getenv("PREMIUM_API_URLS")
-    ?: "https://activation-server-production-29da.up.railway.app"
-
-
 android {
     namespace = Configs.namespace
     compileSdk = Configs.compileSdk
@@ -37,11 +32,6 @@ android {
         targetSdk = Configs.targetSdk
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: Configs.versionCode
         versionName = System.getenv("VERSION_NAME") ?: Configs.versionName
-        buildConfigField(
-            "String",
-            "PREMIUM_API_URLS",
-            buildConfigString(premiumApiUrls)
-        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -96,7 +86,6 @@ android {
 
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
-    implementation(project(":premium-api"))
     implementation("com.github.topjohnwu.libsu:core:6.0.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

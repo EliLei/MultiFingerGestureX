@@ -21,13 +21,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EdgeX"
+rootProject.name = "MultiFingerGestureX"
 include(":app")
-include(":premium-api")
-
-// Premium implementation modules are proprietary and not included in this repo.
-// When the directory is present locally, it is included automatically
-// so ./gradlew :premium:assembleRelease works without any manual changes.
-if (file("premium").exists()) {
-    include(":premium")
-}
