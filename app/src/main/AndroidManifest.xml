@@ -106,21 +106,6 @@
             android:theme="@style/Theme.EdgeX" />
 
         <activity
-            android:name=".ui.EdgeLightingSettingsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.EdgeLightingAppFilterActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
-            android:name=".ui.FluidEffectSettingsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
-        <activity
             android:name=".ui.MultiActionsListActivity"
             android:exported="false"
             android:theme="@style/Theme.EdgeX" />
@@ -151,11 +136,6 @@
             android:exported="false"
             android:theme="@style/Theme.EdgeX" />
 
-        <activity
-            android:name=".ui.PremiumActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EdgeX" />
-
         <receiver
             android:name=".config.ConfigSnapshotReceiver"
             android:exported="false">
@@ -170,12 +150,6 @@
             android:exported="true" />
 
         <service
-            android:name=".license.KeystoreVerifierService"
-            android:exported="true" />
-
-        <service
-            android:name=".service.NotificationEdgeService"
-            android:label="@string/edge_lighting_notification_service"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>
