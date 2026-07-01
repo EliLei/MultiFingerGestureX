@@ -18,14 +18,17 @@ internal object MultiTouchGestureRecognizer {
         val startY: Float,
         val currentX: Float,
         val currentY: Float,
+        val startTimeMs: Long,
     )
 
     data class Result(val fingerCount: Int, val type: MultiTouchGestureType)
 
     fun recognize(
         pointers: List<PointerSnapshot>,
+        endTimeMs: Long,
         smallThreshold: Float,
         largeThreshold: Float,
+        speedThreshold: Float,
     ): Result? {
         if (pointers.size !in 3..5) return null
 
