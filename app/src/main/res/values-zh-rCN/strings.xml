@@ -146,6 +146,7 @@
     <string name="label_small_threshold">小阈值</string>
     <string name="label_large_threshold">大阈值</string>
     <string name="label_waiting_timeout">等待超时</string>
+    <string name="label_gesture_timeout">手势超时</string>
     <string name="label_speed_threshold">快速滑动速度</string>
     <string name="hint_screen_size">屏幕尺寸：%1$s</string>
     <string name="tab_3_fingers">三指</string>

@@ -341,6 +341,14 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             ) ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
         )
     }
+    var gestureTimeout by remember {
+        mutableStateOf(
+            prefs.getString(
+                AppConfig.GESTURE_TIMEOUT_MS,
+                AppConfig.GESTURE_TIMEOUT_MS_DEFAULT.toString()
+            ) ?: AppConfig.GESTURE_TIMEOUT_MS_DEFAULT.toString()
+        )
+    }
     var speedThreshold by remember {
         mutableStateOf(
             prefs.getString(
@@ -392,6 +400,16 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
         onValueChange = { input ->
             waitingTimeout = input
             input.toIntOrNull()?.let { context.putConfig(AppConfig.GESTURE_WAITING_TIMEOUT_MS, it.toString()) }
+        },
+    )
+    ThresholdNumberField(
+        label = stringResource(R.string.label_gesture_timeout),
+        value = gestureTimeout,
+        unit = "ms",
+        isDecimal = false,
+        onValueChange = { input ->
+            gestureTimeout = input
+            input.toIntOrNull()?.let { context.putConfig(AppConfig.GESTURE_TIMEOUT_MS, it.toString()) }
         },
     )
     ThresholdNumberField(

@@ -154,6 +154,7 @@
     <string name="label_small_threshold">Small Threshold</string>
     <string name="label_large_threshold">Large Threshold</string>
     <string name="label_waiting_timeout">Waiting Timeout</string>
+    <string name="label_gesture_timeout">Gesture Timeout</string>
     <string name="label_speed_threshold">Quick Swipe Speed</string>
     <string name="hint_screen_size">Screen size: %1$s</string>
     <string name="action_not_set">Not set</string>
