@@ -1,6 +1,9 @@
 package com.eli.mfgx.ui.compose.screens
 
 import android.content.Context
+import android.graphics.Point
+import android.os.Build
+import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,7 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -38,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
@@ -317,7 +322,7 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             prefs.getString(
                 AppConfig.GESTURE_SMALL_THRESHOLD,
                 AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT.toString()
-            )?.toIntOrNull() ?: AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT
+            ) ?: AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT.toString()
         )
     }
     var largeThreshold by remember {
@@ -325,7 +330,7 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             prefs.getString(
                 AppConfig.GESTURE_LARGE_THRESHOLD,
                 AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT.toString()
-            )?.toIntOrNull() ?: AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT
+            ) ?: AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT.toString()
         )
     }
     var waitingTimeout by remember {
@@ -333,7 +338,7 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             prefs.getString(
                 AppConfig.GESTURE_WAITING_TIMEOUT_MS,
                 AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
-            )?.toIntOrNull() ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT
+            ) ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
         )
     }
     var speedThreshold by remember {
@@ -341,38 +346,88 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             prefs.getString(
                 AppConfig.GESTURE_SPEED_THRESHOLD,
                 AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
-            )?.toFloatOrNull() ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT
+            ) ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
         )
     }
+
+    val (screenW, screenH) = remember { screenDimensionsPx(context) }
 
     Text(
         text = stringResource(R.string.header_thresholds),
         style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     )
+    Text(
+        text = stringResource(R.string.hint_screen_size, "$screenW × $screenH px"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+    )
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "${stringResource(R.string.label_small_threshold)}: $smallThreshold px",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = smallThreshold.toFloat(),
-                onValueChange = { value ->
-                    smallThreshold = value.toInt()
-                    context.putConfig(AppConfig.GESTURE_SMALL_THRESHOLD, smallThreshold.toString())
-                },
-                valueRange = 4f..30f,
-                onValueChangeFinished = {},
-            )
-        }
+    ThresholdNumberField(
+        label = stringResource(R.string.label_small_threshold),
+        value = smallThreshold,
+        unit = "px",
+        isDecimal = false,
+        onValueChange = { input ->
+            smallThreshold = input
+            input.toIntOrNull()?.let { context.putConfig(AppConfig.GESTURE_SMALL_THRESHOLD, it.toString()) }
+        },
+    )
+    ThresholdNumberField(
+        label = stringResource(R.string.label_large_threshold),
+        value = largeThreshold,
+        unit = "px",
+        isDecimal = false,
+        onValueChange = { input ->
+            largeThreshold = input
+            input.toIntOrNull()?.let { context.putConfig(AppConfig.GESTURE_LARGE_THRESHOLD, it.toString()) }
+        },
+    )
+    ThresholdNumberField(
+        label = stringResource(R.string.label_waiting_timeout),
+        value = waitingTimeout,
+        unit = "ms",
+        isDecimal = false,
+        onValueChange = { input ->
+            waitingTimeout = input
+            input.toIntOrNull()?.let { context.putConfig(AppConfig.GESTURE_WAITING_TIMEOUT_MS, it.toString()) }
+        },
+    )
+    ThresholdNumberField(
+        label = stringResource(R.string.label_speed_threshold),
+        value = speedThreshold,
+        unit = "px/ms",
+        isDecimal = true,
+        onValueChange = { input ->
+            speedThreshold = input
+            input.toFloatOrNull()?.let { context.putConfig(AppConfig.GESTURE_SPEED_THRESHOLD, it.toString()) }
+        },
+    )
+}
+
+// 屏幕物理尺寸（宽 × 高 px），用于阈值标定参考
+private fun screenDimensionsPx(context: Context): Pair<Int, Int> {
+    val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        ?: return context.resources.displayMetrics.let { it.widthPixels to it.heightPixels }
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val bounds = wm.maximumWindowMetrics.bounds
+        bounds.width() to bounds.height()
+    } else {
+        val point = Point()
+        @Suppress("DEPRECATION") wm.defaultDisplay.getRealSize(point)
+        point.x to point.y
     }
+}
 
+@Composable
+private fun ThresholdNumberField(
+    label: String,
+    value: String,
+    unit: String,
+    isDecimal: Boolean,
+    onValueChange: (String) -> Unit,
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -380,61 +435,21 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "${stringResource(R.string.label_large_threshold)}: $largeThreshold px",
+                text = label,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Slider(
-                value = largeThreshold.toFloat(),
-                onValueChange = { value ->
-                    largeThreshold = value.toInt()
-                    context.putConfig(AppConfig.GESTURE_LARGE_THRESHOLD, largeThreshold.toString())
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (isDecimal) KeyboardType.Decimal else KeyboardType.Number
+                ),
+                trailingIcon = {
+                    Text(unit, style = MaterialTheme.typography.bodySmall)
                 },
-                valueRange = 8f..60f,
-                onValueChangeFinished = {},
-            )
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "${stringResource(R.string.label_waiting_timeout)}: $waitingTimeout ms",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = waitingTimeout.toFloat(),
-                onValueChange = { value ->
-                    waitingTimeout = value.toInt()
-                    context.putConfig(AppConfig.GESTURE_WAITING_TIMEOUT_MS, waitingTimeout.toString())
-                },
-                valueRange = 50f..500f,
-                onValueChangeFinished = {},
-            )
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "${stringResource(R.string.label_speed_threshold)}: %.1f px/ms".format(speedThreshold),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = speedThreshold,
-                onValueChange = { value ->
-                    speedThreshold = value
-                    context.putConfig(AppConfig.GESTURE_SPEED_THRESHOLD, speedThreshold.toString())
-                },
-                valueRange = 0.5f..5.0f,
-                onValueChangeFinished = {},
             )
         }
     }
