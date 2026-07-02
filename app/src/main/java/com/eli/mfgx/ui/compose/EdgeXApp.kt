@@ -38,6 +38,8 @@ import com.eli.mfgx.config.getConfigString
 import com.eli.mfgx.config.putConfig
 import com.eli.mfgx.ui.compose.components.EdgeXIcon
 import com.eli.mfgx.ui.compose.components.EdgeXIcons
+import com.eli.mfgx.ui.compose.components.EdgeXListGroup
+import com.eli.mfgx.ui.compose.components.EdgeXRow
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.components.EdgeXToast
 import com.eli.mfgx.ui.compose.components.UpdateDialog
@@ -47,6 +49,7 @@ import com.eli.mfgx.ui.compose.screens.MultiTouchGesturesScreen
 import com.eli.mfgx.ui.compose.theme.EdgeXAccent
 import com.eli.mfgx.ui.compose.theme.EdgeXTheme
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
+import com.eli.mfgx.utils.DonateDialog
 import com.eli.mfgx.utils.UpdateChecker
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.delay
@@ -211,6 +214,7 @@ private fun AboutScreen(
     showToast: (String) -> Unit,
     onCheckForUpdates: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize()) {
         EdgeXTopBar(
             title = stringResource(R.string.menu_about),
@@ -236,6 +240,16 @@ private fun AboutScreen(
                 modifier = Modifier.padding(top = 16.dp),
             ) {
                 Text(stringResource(R.string.update_checking))
+            }
+        }
+        EdgeXListGroup(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+            EdgeXRow(
+                title = stringResource(R.string.donate_title),
+                subtitle = stringResource(R.string.donate_subtitle),
+                icon = EdgeXIcons.Donate,
+                onClick = { DonateDialog.show(context) },
+            ) {
+                EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = LocalEdgeXColors.current.onSurfaceDim)
             }
         }
     }

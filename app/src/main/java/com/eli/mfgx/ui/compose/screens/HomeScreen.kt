@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import com.eli.mfgx.ui.compose.components.EdgeXTile
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.theme.EdgeXRadius
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
+import com.eli.mfgx.utils.DonateDialog
 
 data class HomeCallbacks(
     val openRoute: (EdgeXRoute) -> Unit,
@@ -375,12 +377,21 @@ private fun HapticFeedbackTypeSheet(
 
 @Composable
 private fun AboutSettings(callbacks: HomeCallbacks) {
+    val context = LocalContext.current
     EdgeXListGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
         EdgeXRow(
             title = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}",
             subtitle = stringResource(R.string.value_project_url),
             icon = EdgeXIcons.About,
             onClick = { callbacks.openRoute(EdgeXRoute.About) },
+        ) {
+            EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = LocalEdgeXColors.current.onSurfaceDim)
+        }
+        EdgeXRow(
+            title = stringResource(R.string.donate_title),
+            subtitle = stringResource(R.string.donate_subtitle),
+            icon = EdgeXIcons.Donate,
+            onClick = { DonateDialog.show(context) },
         ) {
             EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = LocalEdgeXColors.current.onSurfaceDim)
         }
