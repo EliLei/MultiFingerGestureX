@@ -23,10 +23,6 @@ object DonateDialog {
 
     private const val KOFI_URL = "https://ko-fi.com/eli_lei"
 
-    // Crypto addresses
-    private const val ETH_ADDRESS = "0xf309912220eaba0e7ff7448ada60b509a7b82467"
-    private const val SOL_ADDRESS = "FANCYuPped3sb2YiHoJe56TRSGbC7MitpNKyHP5HmddK"
-
     fun show(context: Context) {
         val dp = { dp: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.resources.displayMetrics).toInt() }
 
@@ -84,21 +80,14 @@ object DonateDialog {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).also { it.bottomMargin = dp(8f) })
 
-        // Buttons row 2 (Ko-fi + Crypto)
+        // Buttons row 2 (Ko-fi only)
         val buttonRow2 = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
 
         val kofiBtn = makeButton(context, context.getString(R.string.donate_kofi), "#13C3FF".toColorInt())
-        buttonRow2.addView(kofiBtn, LinearLayout.LayoutParams(0, dp(44f), 1f).also {
-            it.marginEnd = dp(8f)
-        })
-
-        val cryptoBtn = makeButton(context, context.getString(R.string.donate_crypto), "#F7931A".toColorInt())
-        buttonRow2.addView(cryptoBtn, LinearLayout.LayoutParams(0, dp(44f), 1f).also {
-            it.marginStart = dp(8f)
-        })
+        buttonRow2.addView(kofiBtn, LinearLayout.LayoutParams(0, dp(44f), 1f))
 
         root.addView(buttonRow2, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -128,10 +117,6 @@ object DonateDialog {
         kofiBtn.setOnClickListener {
             dialog.dismiss()
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(KOFI_URL)))
-        }
-        cryptoBtn.setOnClickListener {
-            dialog.dismiss()
-            showCryptoAddresses(context)
         }
 
         dialog.show()
@@ -243,80 +228,5 @@ object DonateDialog {
                 it.window?.setBackgroundDrawable(InsetDrawable(shape, dp(24f)))
                 it.show()
             }
-    }
-
-    fun showCryptoAddresses(context: Context) {
-        val dp = { dp: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.resources.displayMetrics).toInt() }
-
-        val container = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24f), dp(20f), dp(24f), dp(20f))
-        }
-
-        // Title
-        TextView(context).apply {
-            text = context.getString(R.string.donate_crypto_title)
-            textSize = 18f
-            setTextColor(Color.BLACK)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            container.addView(this, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = dp(16f) })
-        }
-
-        // ETH address
-        addCryptoRow(context, container, context.getString(R.string.donate_crypto_eth), ETH_ADDRESS, dp)
-        
-        // SOL address
-        addCryptoRow(context, container, context.getString(R.string.donate_crypto_sol), SOL_ADDRESS, dp)
-
-        val shape = GradientDrawable().apply {
-            setColor("#F5F5F5".toColorInt())
-            cornerRadius = dp(12f).toFloat()
-        }
-
-        AlertDialog.Builder(context)
-            .setView(container)
-            .create()
-            .also {
-                it.window?.setBackgroundDrawable(InsetDrawable(shape, dp(24f)))
-                it.show()
-            }
-    }
-
-    private fun addCryptoRow(context: Context, container: LinearLayout, label: String, address: String, dp: (Float) -> Int) {
-        // Label
-        TextView(context).apply {
-            text = label
-            textSize = 14f
-            setTextColor("#333333".toColorInt())
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            container.addView(this, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = dp(4f) })
-        }
-
-        // Address (clickable to copy)
-        TextView(context).apply {
-            text = address
-            textSize = 12f
-            setTextColor("#666666".toColorInt())
-            background = GradientDrawable().apply {
-                setColor("#EEEEEE".toColorInt())
-                cornerRadius = dp(6f).toFloat()
-            }
-            setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
-            setOnClickListener {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.label_crypto_address), address))
-                Toast.makeText(context, context.getString(R.string.donate_crypto_copied), Toast.LENGTH_SHORT).show()
-            }
-            container.addView(this, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = dp(12f) })
-        }
     }
 }
