@@ -127,7 +127,7 @@ internal class MultiTouchGestureDetector(
 
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
-        // 同步所有指针当前位置并注册新指针
+        // 同步所有指针当前位置并注册新指针（对 WAITING/ACTIVE/HIJACK 统一执行）
         syncPointers(event, registerNew = true)
 
         val currentState = getState()
@@ -152,20 +152,34 @@ internal class MultiTouchGestureDetector(
         }
 
         if (currentState == State.ACTIVE) {
+            // 超限检查优先——确定不可识别 → replay + INACTIVE
             val max = callbacks.maxEnabledFingerCount()
             val pointerCount: Int
             synchronized(stateLock) {
                 pointerCount = pointers.size
             }
             if (max != null && pointerCount > max) {
-                // 超过已启用手势最高手指数：必然无效，立即重放历史并回 INACTIVE
                 handoff.record(event)
                 handoff.replayAll(context)
                 callbacks.log("Fingers $pointerCount > enabled max $max, replayed -> INACTIVE")
                 reset()
                 return true
             }
+            // 超时检查：超限未触发时检查
+            if (event.eventTime - waitingEnteredTimeMs >= callbacks.gestureTimeoutMs()) {
+                // 先注入 CANCEL（依赖录制中最后一次事件的坐标），再清空录制，进入 HIJACK
+                handoff.injectCancel(context)
+                handoff.clear()
+                callbacks.log("Gesture timeout (${event.eventTime - waitingEnteredTimeMs}ms), entering HIJACK")
+                enterHijack()
+                return true
+            }
             handoff.record(event)
+            return true
+        }
+
+        if (currentState == State.HIJACK) {
+            // HIJACK 不录制（syncPointers 已在前方统一调用），直接消费
             return true
         }
         return false
