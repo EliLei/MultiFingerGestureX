@@ -116,6 +116,8 @@ object GestureManager {
 
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
+            handler = mainHandler(),
+            contextProvider = { systemContext!! },
         )
     }
 

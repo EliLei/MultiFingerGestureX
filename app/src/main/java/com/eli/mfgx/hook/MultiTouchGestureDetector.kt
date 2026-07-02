@@ -1,6 +1,7 @@
 package com.eli.mfgx.hook
 
 import android.content.Context
+import android.os.Handler
 import android.view.MotionEvent
 
 /**
@@ -22,6 +23,8 @@ import android.view.MotionEvent
 internal class MultiTouchGestureDetector(
     private val handoff: EventReplayHandoff,
     private val callbacks: Callbacks,
+    private val handler: Handler,
+    private val contextProvider: () -> Context,
 ) {
     interface Callbacks {
         /** 所有 enabled=true 手势中最小的手指数；无任何启用时返回 null。 */
@@ -59,6 +62,51 @@ internal class MultiTouchGestureDetector(
 
     // 状态锁 - 保护所有可变状态访问
     private val stateLock = Any()
+
+    // waitingTimeout 计时器：到点若仍 WAITING 则 → INACTIVE（原子 claim，避免与 hook 线程竞态）
+    private val waitingTimeoutRunnable = Runnable {
+        val triggered = synchronized(stateLock) {
+            if (state == State.WAITING) {
+                state = State.INACTIVE
+                pointers.clear()
+                ignoredIds.clear()
+                true
+            } else false
+        }
+        if (triggered) {
+            callbacks.log("Waiting timeout (timer)")
+            handoff.clear()
+            cancelTimeouts()
+        }
+    }
+
+    // gestureTimeout 计时器：到点若仍 ACTIVE 则注入 CANCEL + 清录制 + → HIJACK（原子 claim）
+    private val gestureTimeoutRunnable = Runnable {
+        val ctx = contextProvider()
+        val triggered = synchronized(stateLock) {
+            if (state == State.ACTIVE) {
+                state = State.HIJACK
+                true
+            } else false
+        }
+        if (!triggered) return@Runnable
+        callbacks.log("Gesture timeout (timer), entering HIJACK")
+        handoff.injectCancel(ctx)
+        handoff.clear()
+        cancelTimeouts()
+    }
+
+    /** 在 ACTION_DOWN 调用：arm 两个超时计时器（自此刻起算）。 */
+    private fun armTimeouts() {
+        handler.postDelayed(waitingTimeoutRunnable, callbacks.waitingTimeoutMs().toLong())
+        handler.postDelayed(gestureTimeoutRunnable, callbacks.gestureTimeoutMs().toLong())
+    }
+
+    /** 取消两个超时计时器（幂等）。 */
+    private fun cancelTimeouts() {
+        handler.removeCallbacks(waitingTimeoutRunnable)
+        handler.removeCallbacks(gestureTimeoutRunnable)
+    }
 
     fun handle(event: MotionEvent, context: Context): Boolean {
         // ACTION_CANCEL 任意状态都清理
