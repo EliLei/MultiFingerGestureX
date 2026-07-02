@@ -79,7 +79,9 @@ Useful issue details:
 
 ## Credits
 
-MultiFingerGestureX is a redesign of EdgeX (originally inspired by Xposed Edge), rebuilt to focus on multi-touch gesture recognition for Android 15+.
+MultiFingerGestureX is a redesign of [EdgeX](https://github.com/fcmfcm1999/EdgeX) (originally inspired by Xposed Edge), rebuilt to focus on multi-touch gesture recognition for Android 15+.
+
+Special thanks to the author of [EdgeX](https://github.com/fcmfcm1999/EdgeX) — this project builds on their original work.
 
 ## License
 

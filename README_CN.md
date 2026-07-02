@@ -79,7 +79,9 @@ MultiFingerGestureX 不是一个普通的悬浮窗工具。应用进程仅作为
 
 ## 致谢
 
-MultiFingerGestureX 是对 EdgeX 的重新设计（最初受 Xposed Edge 启发），针对 Android 15+ 重新构建，专注于多指手势识别。
+MultiFingerGestureX 是对 [EdgeX](https://github.com/fcmfcm1999/EdgeX) 的重新设计（最初受 Xposed Edge 启发），针对 Android 15+ 重新构建，专注于多指手势识别。
+
+特别感谢 [EdgeX](https://github.com/fcmfcm1999/EdgeX) 的作者——本项目基于其原始工作构建。
 
 ## License
 
