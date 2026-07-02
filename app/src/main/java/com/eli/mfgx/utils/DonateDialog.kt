@@ -24,6 +24,16 @@ object DonateDialog {
     private const val KOFI_URL = "https://ko-fi.com/eli_lei"
     private const val EDGEX_KOFI_URL = "https://ko-fi.com/fantasy1999"
 
+    /**
+     * 二维码图片边长 = 屏幕较短边的 70%。
+     * 正方形二维码在保持横竖比的前提下取该值：手机上宽度是瓶颈，故横向占 70%、
+     * 纵向像素等同（正方形），已是在不超出屏幕前提下的最大尺寸。
+     */
+    private fun qrImageSize(context: Context): Int {
+        val dm = context.resources.displayMetrics
+        return (minOf(dm.widthPixels, dm.heightPixels) * 0.7f).toInt()
+    }
+
     fun show(context: Context) {
         val dp = { dp: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.resources.displayMetrics).toInt() }
 
@@ -188,7 +198,7 @@ object DonateDialog {
             val resId = context.resources.getIdentifier("ic_alipay_qr", "drawable", context.packageName)
             if (resId != 0) setImageResource(resId) else visibility = View.GONE
         }
-        container.addView(qrImageView, LinearLayout.LayoutParams(dp(200f), dp(200f)))
+        container.addView(qrImageView, LinearLayout.LayoutParams(qrImageSize(context), qrImageSize(context)))
 
         val shape = GradientDrawable().apply {
             setColor("#F5F5F5".toColorInt())
@@ -235,7 +245,7 @@ object DonateDialog {
                 visibility = View.GONE
             }
         }
-        container.addView(qrImageView, LinearLayout.LayoutParams(dp(200f), dp(200f)))
+        container.addView(qrImageView, LinearLayout.LayoutParams(qrImageSize(context), qrImageSize(context)))
 
         val shape = GradientDrawable().apply {
             setColor("#F5F5F5".toColorInt())
@@ -370,7 +380,7 @@ object DonateDialog {
             val resId = context.resources.getIdentifier("ic_alipay_qr_edgex", "drawable", context.packageName)
             if (resId != 0) setImageResource(resId) else visibility = View.GONE
         }
-        container.addView(qrImageView, LinearLayout.LayoutParams(dp(200f), dp(200f)))
+        container.addView(qrImageView, LinearLayout.LayoutParams(qrImageSize(context), qrImageSize(context)))
 
         val shape = GradientDrawable().apply {
             setColor("#F5F5F5".toColorInt())
@@ -412,7 +422,7 @@ object DonateDialog {
             val resId = context.resources.getIdentifier("ic_wechat_qr_edgex", "drawable", context.packageName)
             if (resId != 0) setImageResource(resId) else visibility = View.GONE
         }
-        container.addView(qrImageView, LinearLayout.LayoutParams(dp(200f), dp(200f)))
+        container.addView(qrImageView, LinearLayout.LayoutParams(qrImageSize(context), qrImageSize(context)))
 
         val shape = GradientDrawable().apply {
             setColor("#F5F5F5".toColorInt())
