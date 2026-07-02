@@ -31,11 +31,13 @@ internal class MultiTouchGestureDetector(
         fun smallThreshold(): Int
         fun largeThreshold(): Int
         fun waitingTimeoutMs(): Int
+        /** ACTIVE 手势整体超时（自第一指落下起算），默认 200ms。 */
+        fun gestureTimeoutMs(): Int
         fun speedThreshold(): Float
         fun log(message: String)
     }
 
-    private enum class State { INACTIVE, WAITING, ACTIVE, BLOCKING }
+    private enum class State { INACTIVE, WAITING, ACTIVE, BLOCKING, HIJACK }
 
     private data class PointerInfo(
         val pointerId: Int,
@@ -92,6 +94,13 @@ internal class MultiTouchGestureDetector(
             state = State.BLOCKING
             pointers.clear()
             ignoredIds.clear()
+        }
+    }
+
+    /** 超时后进入：不清理指针（需继续追踪用于手势识别），仅设置状态。 */
+    private fun enterHijack() {
+        synchronized(stateLock) {
+            state = State.HIJACK
         }
     }
 

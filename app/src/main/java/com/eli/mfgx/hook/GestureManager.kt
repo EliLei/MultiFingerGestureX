@@ -102,6 +102,12 @@ object GestureManager {
                         AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
                     ).toIntOrNull() ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT
 
+                override fun gestureTimeoutMs(): Int =
+                    configRepository.get(
+                        AppConfig.GESTURE_TIMEOUT_MS,
+                        AppConfig.GESTURE_TIMEOUT_MS_DEFAULT.toString()
+                    ).toIntOrNull() ?: AppConfig.GESTURE_TIMEOUT_MS_DEFAULT
+
                 override fun speedThreshold(): Float =
                     configRepository.get(
                         AppConfig.GESTURE_SPEED_THRESHOLD,
