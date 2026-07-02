@@ -45,19 +45,15 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ ! -z "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > app/release.jks
-            echo "RELEASE_STORE_FILE=release.jks" >> local.properties
-            echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> local.properties
-            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> local.properties
-            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
-          else
-            echo "No release keystore secret found, generating debug keystore"
-            # Generate in both possible locations AGP may look for it
-            mkdir -p ~/.android ~/.config/.android
-            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
-            cp ~/.android/debug.keystore ~/.config/.android/debug.keystore 2>/dev/null || true
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Release signing secrets are not fully configured. Set all four repository secrets — KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD — under Settings → Secrets and variables → Actions. Refusing to build: a debug-signed release would not be upgradeable across versions."
+            exit 1
           fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/release.jks
+          echo "RELEASE_STORE_FILE=release.jks" >> local.properties
+          echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> local.properties
+          echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> local.properties
+          echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
