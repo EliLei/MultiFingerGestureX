@@ -233,18 +233,49 @@ internal class MultiTouchGestureDetector(
             callbacks.speedThreshold(),
         )
 
-        if (result != null && callbacks.isGestureEnabled(result.fingerCount, result.type)) {
-            // 有效：清空记录，注入 CANCEL，执行动作，进入 BLOCKING 阻断后续事件
-            handoff.clear()
-            handoff.injectCancel(context)
-            callbacks.dispatchAction(result.fingerCount, result.type, context)
-            callbacks.log("Gesture: ${result.fingerCount}x ${result.type.key}")
-            enterBlocking()
+        if (result != null) {
+            val effective = resolveEffectiveType(result.fingerCount, result.type)
+            if (effective != null) {
+                // 有效：清空记录，注入 CANCEL，执行动作，进入 BLOCKING 阻断后续事件
+                handoff.clear()
+                handoff.injectCancel(context)
+                callbacks.dispatchAction(result.fingerCount, effective, context)
+                callbacks.log("Gesture: ${result.fingerCount}x ${effective.key}")
+                enterBlocking()
+            } else {
+                // 无效：重放记录，回到 INACTIVE
+                handoff.replayAll(context)
+                callbacks.log("Gesture invalid, replayed (${result.fingerCount}x ${result.type.key} disabled)")
+                reset()
+            }
         } else {
             // 无效：重放记录，回到 INACTIVE
             handoff.replayAll(context)
-            callbacks.log("Gesture invalid, replayed ${if (result == null) "(no match)" else "(${result.fingerCount}x ${result.type.key} disabled)"}")
+            callbacks.log("Gesture invalid, replayed (no match)")
             reset()
+        }
+    }
+
+    /**
+     * 手势是否已配置（已启用且绑定了有效动作）。未绑定动作的手势视为未配置，不消费事件。
+     */
+    private fun isConfigured(count: Int, type: MultiTouchGestureType): Boolean {
+        if (!callbacks.isGestureEnabled(count, type)) return false
+        val action = callbacks.resolveAction(count, type)
+        return action.isNotEmpty() && action != "none"
+    }
+
+    /**
+     * 解析实际生效的手势类型。快速上滑/下滑未配置时，降级为普通上滑/下滑；均未配置返回 null。
+     */
+    private fun resolveEffectiveType(count: Int, type: MultiTouchGestureType): MultiTouchGestureType? {
+        if (isConfigured(count, type)) return type
+        return when (type) {
+            MultiTouchGestureType.QUICK_SWIPE_UP ->
+                if (isConfigured(count, MultiTouchGestureType.SWIPE_UP)) MultiTouchGestureType.SWIPE_UP else null
+            MultiTouchGestureType.QUICK_SWIPE_DOWN ->
+                if (isConfigured(count, MultiTouchGestureType.SWIPE_DOWN)) MultiTouchGestureType.SWIPE_DOWN else null
+            else -> null
         }
     }
 

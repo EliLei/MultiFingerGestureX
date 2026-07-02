@@ -221,18 +221,22 @@ private fun AboutScreen(
             onBack = onBack,
         )
         Column(modifier = Modifier.padding(16.dp)) {
+            val colors = LocalEdgeXColors.current
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineSmall,
+                color = colors.onSurface,
             )
             Text(
                 text = "v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurface2,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Text(
                 text = stringResource(R.string.value_project_url),
                 style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceDim,
                 modifier = Modifier.padding(top = 8.dp),
             )
             TextButton(
