@@ -58,7 +58,6 @@ internal class MultiTouchGestureDetector(
     private val pointers = LinkedHashMap<Int, PointerInfo>()
     private val ignoredIds = mutableSetOf<Int>()
     @Volatile private var state = State.INACTIVE
-    private var waitingEnteredTimeMs: Long = 0L
 
     // 状态锁 - 保护所有可变状态访问
     private val stateLock = Any()
@@ -131,6 +130,7 @@ internal class MultiTouchGestureDetector(
     }
 
     fun reset() {
+        cancelTimeouts()
         synchronized(stateLock) {
             state = State.INACTIVE
             pointers.clear()
@@ -141,6 +141,7 @@ internal class MultiTouchGestureDetector(
 
     // 有效手势触发后进入：清空指针数据但保持 handoff 已注入的 CANCEL 生效，阻断残余事件
     private fun enterBlocking() {
+        cancelTimeouts()
         synchronized(stateLock) {
             state = State.BLOCKING
             pointers.clear()
@@ -150,6 +151,7 @@ internal class MultiTouchGestureDetector(
 
     /** 超时后进入：不清理指针（需继续追踪用于手势识别），仅设置状态。 */
     private fun enterHijack() {
+        cancelTimeouts()
         synchronized(stateLock) {
             state = State.HIJACK
         }
@@ -168,8 +170,8 @@ internal class MultiTouchGestureDetector(
         synchronized(stateLock) {
             pointers[pid] = PointerInfo(pid, x, y, x, y, now)
             state = State.WAITING
-            waitingEnteredTimeMs = now
         }
+        armTimeouts()
         return false // WAITING 不劫持
     }
 
@@ -189,13 +191,9 @@ internal class MultiTouchGestureDetector(
                 pointerCount = pointers.size
             }
             if (threshold != null && pointerCount >= threshold) {
-                // WAITING→ACTIVE 的事件时间判定：凑齐阈值耗时超时则作废（不使用计时器）
-                if (waitingExpired(event.eventTime)) {
-                    reset()
-                    return false
-                }
-                // 进入 ACTIVE，本次 POINTER_DOWN 也被劫持记录
+                // 进入 ACTIVE，本次 POINTER_DOWN 也被劫持记录；取消 waiting 计时器（gesture 计时器继续）
                 setState(State.ACTIVE)
+                handler.removeCallbacks(waitingTimeoutRunnable)
                 handoff.record(event)
                 return true // 消费
             }
@@ -216,15 +214,6 @@ internal class MultiTouchGestureDetector(
                 reset()
                 return true
             }
-            // 超时检查：超限未触发时检查
-            if (event.eventTime - waitingEnteredTimeMs >= callbacks.gestureTimeoutMs()) {
-                // 先注入 CANCEL（依赖录制中最后一次事件的坐标），再清空录制，进入 HIJACK
-                handoff.injectCancel(context)
-                handoff.clear()
-                callbacks.log("Gesture timeout (${event.eventTime - waitingEnteredTimeMs}ms), entering HIJACK")
-                enterHijack()
-                return true
-            }
             handoff.record(event)
             return true
         }
@@ -239,14 +228,6 @@ internal class MultiTouchGestureDetector(
     private fun handleMove(event: MotionEvent, context: Context): Boolean {
         val currentState = getState()
         if (currentState == State.ACTIVE) {
-            if (event.eventTime - waitingEnteredTimeMs >= callbacks.gestureTimeoutMs()) {
-                // 超时：先注入 CANCEL（依赖录制中最后一次事件的坐标），再清空录制，进入 HIJACK
-                handoff.injectCancel(context)
-                handoff.clear()
-                callbacks.log("Gesture timeout (${event.eventTime - waitingEnteredTimeMs}ms), entering HIJACK")
-                enterHijack()
-                return true
-            }
             syncPointers(event, registerNew = false)
             handoff.record(event)
             return true
@@ -310,13 +291,6 @@ internal class MultiTouchGestureDetector(
     private fun setState(newState: State) {
         synchronized(stateLock) {
             state = newState
-        }
-    }
-
-    private fun waitingExpired(nowMs: Long): Boolean {
-        synchronized(stateLock) {
-            return state == State.WAITING &&
-                nowMs - waitingEnteredTimeMs >= callbacks.waitingTimeoutMs()
         }
     }
 
