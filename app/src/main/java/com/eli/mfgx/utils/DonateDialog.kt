@@ -21,7 +21,7 @@ import com.eli.mfgx.R
 
 object DonateDialog {
 
-    private const val KOFI_URL = "https://ko-fi.com/fantasy1999"
+    private const val KOFI_URL = "https://ko-fi.com/eli_lei"
 
     // Crypto addresses
     private const val ETH_ADDRESS = "0xf309912220eaba0e7ff7448ada60b509a7b82467"
