@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多指手势状态机 · MultiFingerGestureX</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #2563eb;
+    --code-bg: #f8fafc;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 26px; }
+  header .sub { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  header .src { font-size: 13px; color: var(--muted); }
+  header .src code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  h2 { font-size: 18px; margin: 0 0 16px; }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .mermaid { display: flex; justify-content: center; }
+
+  /* legend chips */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .dot.inactive { background: #cbd5e1; border: 1px solid #94a3b8; }
+  .dot.waiting  { background: #fde68a; border: 1px solid #d97706; }
+  .dot.active   { background: #bfdbfe; border: 1px solid #2563eb; }
+  .dot.blocking { background: #fecaca; border: 1px solid #dc2626; }
+
+  /* transition table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--code-bg); color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td:first-child { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; color: #334155; white-space: nowrap; }
+  tr:hover td { background: #fbfdff; }
+  .st { font-weight: 600; }
+  .st.inactive { color: #64748b; }
+  .st.waiting  { color: #b45309; }
+  .st.active   { color: #1d4ed8; }
+  .st.blocking { color: #b91c1c; }
+  .consume-yes { color: #b91c1c; font-weight: 600; }
+  .consume-no  { color: var(--muted); }
+
+  footer { margin-top: 32px; color: var(--muted); font-size: 12px; text-align: center; }
+  code.inline { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>多指手势状态机</h1>
+    <div class="sub">MultiTouchGestureDetector · 触摸 Action 事件流转</div>
+    <div class="src">源文件：<code>app/src/main/java/com/eli/mfgx/hook/MultiTouchGestureDetector.kt</code></div>
+  </header>
+
+  <!-- 1. 状态图 -->
+  <section class="card">
+    <h2><span class="num">1</span> 状态流转图</h2>
+    <div class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> INACTIVE
+
+    INACTIVE --> WAITING: ACTION_DOWN
+    WAITING --> ACTIVE: POINTER_DOWN（数量 ≥ 阈值）
+    WAITING --> INACTIVE: 超时 / UP / CANCEL
+
+    ACTIVE --> BLOCKING: UP / POINTER_UP（判定有效）
+    ACTIVE --> INACTIVE: UP / POINTER_UP（判定无效）
+
+    BLOCKING --> WAITING: ACTION_DOWN
+    BLOCKING --> INACTIVE: ACTION_CANCEL
+
+    WAITING --> WAITING: MOVE / POINTER_DOWN(不足) / POINTER_UP(忽略)
+    ACTIVE --> ACTIVE: POINTER_DOWN / MOVE
+    BLOCKING --> BLOCKING: MOVE / POINTER_DOWN / POINTER_UP / UP（劫持抛弃）
+
+    classDef sInactive fill:#e2e8f0,stroke:#64748b,color:#0f172a
+    classDef sWaiting  fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sActive   fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef sBlocking fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+
+    class INACTIVE sInactive
+    class WAITING sWaiting
+    class ACTIVE sActive
+    class BLOCKING sBlocking
+    </div>
+    <div class="legend">
+      <span class="chip"><span class="dot inactive"></span>INACTIVE 空闲</span>
+      <span class="chip"><span class="dot waiting"></span>WAITING 待凑齐手指数</span>
+      <span class="chip"><span class="dot active"></span>ACTIVE 已锁定手势，劫持录制</span>
+      <span class="chip"><span class="dot blocking"></span>BLOCKING 阻断残余事件</span>
+    </div>
+  </section>
+
+  <!-- 2. 判定流程 -->
+  <section class="card">
+    <h2><span class="num">2</span> 手势判定流程（finishGesture）</h2>
+    <p style="margin:0 0 16px;color:var(--muted);font-size:13px;">
+      处于 <span class="st active">ACTIVE</span> 时收到 <code class="inline">POINTER_UP</code> / <code class="inline">ACTION_UP</code> 触发判定：
+    </p>
+    <div class="mermaid">
+flowchart TD
+    A["POINTER_UP / ACTION_UP<br/>（处于 ACTIVE）"] --> B{"recognize() 返回非空<br/>且 该手势 isEnabled ?"}
+    B -- 是（有效） --> C["handoff.clear()<br/>injectCancel(注入 ACTION_CANCEL)<br/>dispatchAction(执行动作)"]
+    C --> D[BLOCKING]
+    B -- 否（无效） --> E["handoff.replayAll()<br/>重放历史事件"]
+    E --> F[INACTIVE]
+
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef bad  fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef endBlock fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+    classDef endIdle fill:#e2e8f0,stroke:#64748b,color:#0f172a
+    class C good
+    class E bad
+    class D endBlock
+    class F endIdle
+    </div>
+  </section>
+
+  <!-- 3. 事件 × 状态 转移表 -->
+  <section class="card">
+    <h2><span class="num">3</span> Action 事件 × 状态 转移表</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Action 事件</th>
+          <th>INACTIVE</th>
+          <th>WAITING</th>
+          <th>ACTIVE</th>
+          <th>BLOCKING</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ACTION_DOWN</td>
+          <td>→ <span class="st waiting">WAITING</span> <span class="consume-no">（不消费）</span></td>
+          <td>→ <span class="st waiting">WAITING</span>（新序列）</td>
+          <td>→ <span class="st waiting">WAITING</span>（新序列）</td>
+          <td>→ <span class="st waiting">WAITING</span>（同 INACTIVE）</td>
+        </tr>
+        <tr>
+          <td>ACTION_POINTER_DOWN</td>
+          <td>不动 <span class="consume-no">（不消费）</span></td>
+          <td>达阈值→<span class="st active">ACTIVE</span> <span class="consume-yes">（消费）</span>；否则留 <span class="st waiting">WAITING</span></td>
+          <td>留 <span class="st active">ACTIVE</span> <span class="consume-yes">（消费）</span></td>
+          <td>留 <span class="st blocking">BLOCKING</span> <span class="consume-yes">（劫持抛弃）</span></td>
+        </tr>
+        <tr>
+          <td>ACTION_MOVE</td>
+          <td>不动 <span class="consume-no">（不消费）</span></td>
+          <td>同步坐标；超时→<span class="st inactive">INACTIVE</span></td>
+          <td>留 <span class="st active">ACTIVE</span> <span class="consume-yes">（消费）</span></td>
+          <td>留 <span class="st blocking">BLOCKING</span> <span class="consume-yes">（劫持抛弃）</span></td>
+        </tr>
+        <tr>
+          <td>ACTION_POINTER_UP</td>
+          <td>不动 <span class="consume-no">（不消费）</span></td>
+          <td>该指入 ignoredIds；留 <span class="st waiting">WAITING</span></td>
+          <td>→ 判定 → <span class="st blocking">BLOCKING</span>/<span class="st inactive">INACTIVE</span> <span class="consume-yes">（消费）</span></td>
+          <td>留 <span class="st blocking">BLOCKING</span> <span class="consume-yes">（劫持抛弃）</span></td>
+        </tr>
+        <tr>
+          <td>ACTION_UP</td>
+          <td>→ <span class="st inactive">INACTIVE</span> <span class="consume-no">（不消费）</span></td>
+          <td>→ <span class="st inactive">INACTIVE</span> <span class="consume-no">（不消费）</span></td>
+          <td>→ 判定 → <span class="st blocking">BLOCKING</span>/<span class="st inactive">INACTIVE</span> <span class="consume-yes">（消费）</span></td>
+          <td>留 <span class="st blocking">BLOCKING</span> <span class="consume-yes">（劫持抛弃）</span></td>
+        </tr>
+        <tr>
+          <td>ACTION_CANCEL</td>
+          <td colspan="4" style="text-align:center;color:var(--muted);">任意状态 → reset() → <span class="st inactive">INACTIVE</span>（不消费，交系统处理）</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    自动渲染依赖 CDN（mermaid@10）。离线打开将不显示图形，但表格内容可正常查看。
+  </footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#ffffff',
+      primaryTextColor: '#0f172a',
+      primaryBorderColor: '#94a3b8',
+      lineColor: '#64748b',
+      fontFamily: '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 16 },
+    stateDiagram: { padding: 16 }
+  });
+</script>
+</body>
+</html>

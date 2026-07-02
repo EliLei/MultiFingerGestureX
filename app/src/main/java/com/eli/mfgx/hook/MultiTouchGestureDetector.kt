@@ -6,8 +6,10 @@ import android.view.MotionEvent
 /**
  * 多指手势状态机。
  *
- * 状态：INACTIVE → WAITING → ACTIVE → (判定) → INACTIVE
+ * 状态：INACTIVE → WAITING → ACTIVE → (判定) → BLOCKING / INACTIVE
  * WAITING 态进入后若 [Callbacks.waitingTimeoutMs] 内未进入 ACTIVE 则回到 INACTIVE。
+ * ACTIVE 结束时判定手势：有效 → 执行动作 + 注入 CANCEL + BLOCKING；无效 → 重放事件 + INACTIVE。
+ * BLOCKING：劫持并抛弃除 ACTION_DOWN / ACTION_CANCEL 外的所有事件；收到 DOWN 同 INACTIVE 进入 WAITING，CANCEL 回 INACTIVE。
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
  *
  * 线程安全：所有公开方法线程安全，可在 InputManagerService hook 线程调用。
@@ -29,7 +31,7 @@ internal class MultiTouchGestureDetector(
         fun log(message: String)
     }
 
-    private enum class State { INACTIVE, WAITING, ACTIVE }
+    private enum class State { INACTIVE, WAITING, ACTIVE, BLOCKING }
 
     private data class PointerInfo(
         val pointerId: Int,
@@ -56,6 +58,11 @@ internal class MultiTouchGestureDetector(
             return false // CANCEL 不消费，交系统处理
         }
 
+        // BLOCKING：劫持并抛弃除 ACTION_DOWN（开启新序列）外的所有事件
+        if (getState() == State.BLOCKING && event.actionMasked != MotionEvent.ACTION_DOWN) {
+            return true // 消费并丢弃，阻断本次手势序列的残余事件
+        }
+
         return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> handleDown(event)
             MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event, context)
@@ -73,6 +80,15 @@ internal class MultiTouchGestureDetector(
             ignoredIds.clear()
         }
         handoff.clear()
+    }
+
+    // 有效手势触发后进入：清空指针数据但保持 handoff 已注入的 CANCEL 生效，阻断残余事件
+    private fun enterBlocking() {
+        synchronized(stateLock) {
+            state = State.BLOCKING
+            pointers.clear()
+            ignoredIds.clear()
+        }
     }
 
     private fun handleDown(event: MotionEvent): Boolean {
@@ -221,17 +237,18 @@ internal class MultiTouchGestureDetector(
         )
 
         if (result != null && callbacks.isGestureEnabled(result.fingerCount, result.type)) {
-            // 有效：清空记录，注入 CANCEL，执行动作
+            // 有效：清空记录，注入 CANCEL，执行动作，进入 BLOCKING 阻断后续事件
             handoff.clear()
             handoff.injectCancel(context)
             callbacks.dispatchAction(result.fingerCount, result.type, context)
             callbacks.log("Gesture: ${result.fingerCount}x ${result.type.key}")
+            enterBlocking()
         } else {
-            // 无效：重放记录
+            // 无效：重放记录，回到 INACTIVE
             handoff.replayAll(context)
             callbacks.log("Gesture invalid, replayed ${if (result == null) "(no match)" else "(${result.fingerCount}x ${result.type.key} disabled)"}")
+            reset()
         }
-        reset()
     }
 
     private fun syncPointers(event: MotionEvent, registerNew: Boolean) {
