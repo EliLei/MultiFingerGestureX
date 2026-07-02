@@ -96,7 +96,7 @@ object DonateDialog {
         ).also { it.bottomMargin = dp(4f) })
 
         // EdgeX author link
-        TextView(context).apply {
+        val edgexAuthorLink = TextView(context).apply {
             text = context.getString(R.string.donate_edgex_author)
             textSize = 12f
             setTextColor("#1677FF".toColorInt())
@@ -108,10 +108,6 @@ object DonateDialog {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).also { it.topMargin = dp(12f) })
-            setOnClickListener {
-                dialog.dismiss()
-                showEdgeXAuthorDialog(context)
-            }
         }
 
         val shape = GradientDrawable().apply {
@@ -137,6 +133,11 @@ object DonateDialog {
         kofiBtn.setOnClickListener {
             dialog.dismiss()
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(KOFI_URL)))
+        }
+
+        edgexAuthorLink.setOnClickListener {
+            dialog.dismiss()
+            showEdgeXAuthorDialog(context)
         }
 
         dialog.show()
