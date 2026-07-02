@@ -175,9 +175,9 @@ internal class MultiTouchGestureDetector(
         val currentState = getState()
         if (currentState == State.ACTIVE) {
             if (event.eventTime - waitingEnteredTimeMs >= callbacks.gestureTimeoutMs()) {
-                // 超时：清空录制、注入 CANCEL、进入 HIJACK（保留指针追踪）
-                handoff.clear()
+                // 超时：先注入 CANCEL（依赖录制中最后一次事件的坐标），再清空录制，进入 HIJACK
                 handoff.injectCancel(context)
+                handoff.clear()
                 callbacks.log("Gesture timeout (${event.eventTime - waitingEnteredTimeMs}ms), entering HIJACK")
                 enterHijack()
                 return true
