@@ -7,7 +7,8 @@ import android.view.MotionEvent
  * 多指手势状态机。
  *
  * 状态：INACTIVE → WAITING → ACTIVE → (判定) → BLOCKING / INACTIVE
- * WAITING 态进入后若 [Callbacks.waitingTimeoutMs] 内未进入 ACTIVE 则回到 INACTIVE。
+ * WAITING 超时采用事件时间判定（无计时器）：仅在凑齐阈值进入 ACTIVE 的瞬间检查 eventTime，
+ * 自第一指落下超过 [Callbacks.waitingTimeoutMs] 则作废 → INACTIVE。
  * ACTIVE 结束时判定手势：有效 → 执行动作 + 注入 CANCEL + BLOCKING；无效 → 重放事件 + INACTIVE。
  * BLOCKING：劫持并抛弃除 ACTION_DOWN / ACTION_CANCEL 外的所有事件；收到 DOWN 同 INACTIVE 进入 WAITING，CANCEL 回 INACTIVE。
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
@@ -111,11 +112,6 @@ internal class MultiTouchGestureDetector(
 
     private fun handlePointerDown(event: MotionEvent, context: Context): Boolean {
         if (getState() == State.INACTIVE) return false
-        // WAITING 超时：第一指落下后超时未凑齐阈值 → 作废
-        if (getState() == State.WAITING && waitingExpired(event.eventTime)) {
-            reset()
-            return false
-        }
 
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
@@ -130,6 +126,11 @@ internal class MultiTouchGestureDetector(
                 pointerCount = pointers.size
             }
             if (threshold != null && pointerCount >= threshold) {
+                // WAITING→ACTIVE 的事件时间判定：凑齐阈值耗时超时则作废（不使用计时器）
+                if (waitingExpired(event.eventTime)) {
+                    reset()
+                    return false
+                }
                 // 进入 ACTIVE，本次 POINTER_DOWN 也被劫持记录
                 setState(State.ACTIVE)
                 handoff.record(event)
@@ -148,12 +149,8 @@ internal class MultiTouchGestureDetector(
     private fun handleMove(event: MotionEvent, context: Context): Boolean {
         val currentState = getState()
         if (currentState != State.ACTIVE) {
-            // WAITING/INACTIVE 期间更新坐标但不劫持
+            // WAITING/INACTIVE 期间更新坐标但不劫持；超时不在此处判定，统一在 WAITING→ACTIVE 时检查
             if (currentState == State.WAITING) {
-                if (waitingExpired(event.eventTime)) {
-                    reset()
-                    return false
-                }
                 syncPointers(event, registerNew = false)
             }
             return false
