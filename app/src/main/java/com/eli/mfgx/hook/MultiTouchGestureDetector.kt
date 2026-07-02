@@ -149,14 +149,6 @@ internal class MultiTouchGestureDetector(
         }
     }
 
-    /** 超时后进入：不清理指针（需继续追踪用于手势识别），仅设置状态。 */
-    private fun enterHijack() {
-        cancelTimeouts()
-        synchronized(stateLock) {
-            state = State.HIJACK
-        }
-    }
-
     private fun handleDown(event: MotionEvent): Boolean {
         // 无论先前状态，新 ACTION_DOWN 开启新序列
         reset()
@@ -295,6 +287,14 @@ internal class MultiTouchGestureDetector(
     }
 
     private fun finishGesture(event: MotionEvent, context: Context) {
+        // 重检 state：gestureTimeoutRunnable（主线程）可能在调用方读取 ACTIVE 之后、
+        // 进入此方法之前已 claim 为 HIJACK。若已离开 ACTIVE，交由 HIJACK 路径收尾，
+        // 避免 finishGesture 与计时器双重 injectCancel / 重复派发。
+        val stateAtEntry = synchronized(stateLock) { state }
+        if (stateAtEntry != State.ACTIVE) {
+            if (stateAtEntry == State.HIJACK) finishHijack(event, context)
+            return
+        }
         // 有效指针 = 当前仍在 pointers 中（含本次抬起的，因为 syncPointers 后未移除）
         val valid: List<PointerInfo>
         val ignored: Set<Int>
