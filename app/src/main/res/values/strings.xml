@@ -102,6 +102,12 @@
     <string name="donate_kofi">Ko-fi</string>
     <string name="donate_alipay_scan">Scan with Alipay to donate</string>
     <string name="donate_wechat_scan">Scan with WeChat to donate</string>
+    <string name="donate_edgex_author">Tip EdgeX author</string>
+    <string name="donate_edgex_title">Tip EdgeX original author</string>
+    <string name="donate_edgex_subtitle">Original author of EdgeX project</string>
+    <string name="donate_edgex_alipay_scan">Scan with Alipay to donate</string>
+    <string name="donate_edgex_wechat_scan">Scan with WeChat to donate</string>
+    <string name="donate_edgex_kofi">Ko-fi</string>
 
     <!-- Gesture Zone Titles -->
     <string name="zone_left_top">Top-Left</string>

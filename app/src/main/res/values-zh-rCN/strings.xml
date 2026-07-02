@@ -99,6 +99,12 @@
     <string name="donate_kofi">Ko-fi</string>
     <string name="donate_alipay_scan">打开支付宝扫一扫捐赠</string>
     <string name="donate_wechat_scan">打开微信扫一扫捐赠</string>
+    <string name="donate_edgex_author">打赏EdgeX作者</string>
+    <string name="donate_edgex_title">打赏EdgeX原作者</string>
+    <string name="donate_edgex_subtitle">EdgeX项目的原作者</string>
+    <string name="donate_edgex_alipay_scan">打开支付宝扫一扫捐赠</string>
+    <string name="donate_edgex_wechat_scan">打开微信扫一扫捐赠</string>
+    <string name="donate_edgex_kofi">Ko-fi</string>
 
     <!-- 手势区域名称 -->
     <string name="zone_left_top">左上</string>
