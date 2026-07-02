@@ -10,6 +10,7 @@ import android.view.MotionEvent
  * WAITING 超时采用事件时间判定（无计时器）：仅在凑齐阈值进入 ACTIVE 的瞬间检查 eventTime，
  * 自第一指落下超过 [Callbacks.waitingTimeoutMs] 则作废 → INACTIVE。
  * ACTIVE 结束时判定手势：有效 → 执行动作 + 注入 CANCEL + BLOCKING；无效 → 重放事件 + INACTIVE。
+ * ACTIVE 期间新增手指数超过 maxEnabledFingerCount 时，立即 replayAll 重放历史并回 INACTIVE（不等首个抬手判定）。
  * BLOCKING：劫持并抛弃除 ACTION_DOWN / ACTION_CANCEL 外的所有事件；收到 DOWN 同 INACTIVE 进入 WAITING，CANCEL 回 INACTIVE。
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
  *
@@ -142,6 +143,19 @@ internal class MultiTouchGestureDetector(
         }
 
         if (currentState == State.ACTIVE) {
+            val max = callbacks.maxEnabledFingerCount()
+            val pointerCount: Int
+            synchronized(stateLock) {
+                pointerCount = pointers.size
+            }
+            if (max != null && pointerCount > max) {
+                // 超过已启用手势最高手指数：必然无效，立即重放历史并回 INACTIVE
+                handoff.record(event)
+                handoff.replayAll(context)
+                callbacks.log("Fingers $pointerCount > enabled max $max, replayed -> INACTIVE")
+                reset()
+                return true
+            }
             handoff.record(event)
             return true
         }
