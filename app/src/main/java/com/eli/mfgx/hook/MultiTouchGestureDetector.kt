@@ -230,6 +230,10 @@ internal class MultiTouchGestureDetector(
             finishGesture(event, context)
             return true
         }
+        if (currentState == State.HIJACK) {
+            finishHijack(event, context)
+            return true
+        }
         return false
     }
 
@@ -239,6 +243,10 @@ internal class MultiTouchGestureDetector(
         if (currentState == State.ACTIVE) {
             handoff.record(event)
             finishGesture(event, context)
+            return true
+        }
+        if (currentState == State.HIJACK) {
+            finishHijack(event, context)
             return true
         }
         // WAITING 或 INACTIVE：最后一个手指抬起，结束序列
@@ -305,6 +313,40 @@ internal class MultiTouchGestureDetector(
             callbacks.log("Gesture invalid, replayed (no match)")
             reset()
         }
+    }
+
+    /**
+     * HIJACK 抬手判定：运行手势识别（有效则派发动作），识别后一律进入 BLOCKING。
+     * 不重放（handoff 已空）、不注入 CANCEL（进入 HIJACK 时已注入）。
+     */
+    private fun finishHijack(event: MotionEvent, context: Context) {
+        // 有效指针 = 当前仍在 pointers 中
+        val valid: List<PointerInfo>
+        synchronized(stateLock) {
+            valid = pointers.values.filterNot { ignoredIds.contains(it.pointerId) }
+        }
+
+        val snapshots = valid.map {
+            MultiTouchGestureRecognizer.PointerSnapshot(
+                it.pointerId, it.startX, it.startY, it.currentX, it.currentY, it.startTimeMs
+            )
+        }
+        val result = MultiTouchGestureRecognizer.recognize(
+            snapshots, event.eventTime,
+            callbacks.smallThreshold().toFloat(),
+            callbacks.largeThreshold().toFloat(),
+            callbacks.speedThreshold(),
+        )
+
+        if (result != null) {
+            val effective = resolveEffectiveType(result.fingerCount, result.type)
+            if (effective != null) {
+                callbacks.dispatchAction(result.fingerCount, effective, context)
+                callbacks.log("Gesture (hijack): ${result.fingerCount}x ${effective.key}")
+            }
+        }
+        // 无论识别结果，一律进入 BLOCKING
+        enterBlocking()
     }
 
     /**
