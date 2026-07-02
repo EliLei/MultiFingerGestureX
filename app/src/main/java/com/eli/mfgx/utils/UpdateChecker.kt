@@ -12,7 +12,7 @@ import java.net.URL
 object UpdateChecker {
 
     private const val TAG = "UpdateChecker"
-    private const val API_URL = "https://api.github.com/repos/fcmfcm1999/EdgeX/releases/latest"
+    private const val API_URL = "https://api.github.com/repos/EliLei/MultiFingerGestureX/releases/latest"
     private const val PREF_NAME = "update_checker"
     private const val KEY_LAST_CHECK = "last_check_time"
     private const val KEY_SKIPPED_VERSION = "skipped_version"

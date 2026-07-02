@@ -27,9 +27,8 @@ It is intended for rooted LSPosed users who want to trigger actions with multi-f
 
 ## Features
 
-- **Multi-touch gestures**: 3, 4, and 5-finger gestures with 6 gesture types per finger count.
-- **Gesture types**: Swipe Up, Swipe Down, Swipe Left, Swipe Right, Pinch In, Pinch Out.
-- **Configurable thresholds**: Small threshold (minimum movement) and large threshold (confirmation threshold) in pixels.
+- **Multi-touch gestures**: 3, 4, and 5-finger gestures with 8 gesture types per finger count.
+- **Gesture types**: Swipe Up, Swipe Down, Swipe Left, Swipe Right, Pinch In, Pinch Out, Quick Swipe Up, Quick Swipe Down.
 - **Per-gesture enable/disable**: Each finger count × gesture type combination can be independently enabled.
 - **Per-gesture action binding**: Each enabled gesture binds to a configurable action.
 - **System actions**: Back, Home, Recents, notifications, lock screen, screenshot, volume, brightness, and more.

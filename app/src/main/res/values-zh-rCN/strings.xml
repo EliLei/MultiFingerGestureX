@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EdgeX</string>
+    <string name="app_name">MultiFingerGestureX</string>
 
     <!-- 界面标题 -->
-    <string name="header_main">EdgeX</string>
+    <string name="header_main">MultiFingerGestureX</string>
     <string name="header_gestures">手势</string>
     <string name="header_freezer">冰箱</string>
     <string name="header_action_selection">选择动作</string>
@@ -78,7 +78,7 @@
     <string name="label_project_url">项目地址</string>
     <string name="label_version">版本</string>
     <string name="value_author">fantasy1999</string>
-    <string name="value_project_url">github.com/fcmfcm1999/EdgeX</string>
+    <string name="value_project_url">github.com/EliLei/MultiFingerGestureX</string>
     <string name="value_version">0.1</string>
 
     <!-- 更新检查 -->

@@ -82,7 +82,7 @@
     <string name="label_project_url">Project URL</string>
     <string name="label_version">Version</string>
     <string name="value_author">fantasy1999</string>
-    <string name="value_project_url">github.com/elilee/MultiFingerGestureX</string>
+    <string name="value_project_url">github.com/EliLei/MultiFingerGestureX</string>
     <string name="value_version">0.2</string>
 
     <!-- Update Checker -->
