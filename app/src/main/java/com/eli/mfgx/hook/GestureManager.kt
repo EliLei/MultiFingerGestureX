@@ -55,6 +55,21 @@ object GestureManager {
                     return min
                 }
 
+                override fun maxEnabledFingerCount(): Int? {
+                    var max: Int? = null
+                    for (count in AppConfig.MULTI_TOUCH_FINGER_COUNTS) {
+                        for (type in MultiTouchGestureType.values()) {
+                            val enabled = configRepository.get(
+                                AppConfig.gestureEnabledKey(count, type.key), "false"
+                            ) == "true"
+                            if (enabled) {
+                                if (max == null || count > max!!) max = count
+                            }
+                        }
+                    }
+                    return max
+                }
+
                 override fun isGestureEnabled(count: Int, type: MultiTouchGestureType): Boolean =
                     configRepository.get(AppConfig.gestureEnabledKey(count, type.key), "false") == "true"
 

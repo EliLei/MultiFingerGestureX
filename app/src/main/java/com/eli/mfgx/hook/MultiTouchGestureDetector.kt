@@ -22,6 +22,8 @@ internal class MultiTouchGestureDetector(
     interface Callbacks {
         /** 所有 enabled=true 手势中最小的手指数；无任何启用时返回 null。 */
         fun minEnabledFingerCount(): Int?
+        /** 所有 enabled=true 手势中最高的手指数；无任何启用时返回 null。 */
+        fun maxEnabledFingerCount(): Int?
         fun isGestureEnabled(count: Int, type: MultiTouchGestureType): Boolean
         fun resolveAction(count: Int, type: MultiTouchGestureType): String
         fun dispatchAction(count: Int, type: MultiTouchGestureType, context: Context)
