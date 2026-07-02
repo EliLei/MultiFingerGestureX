@@ -173,16 +173,28 @@ internal class MultiTouchGestureDetector(
 
     private fun handleMove(event: MotionEvent, context: Context): Boolean {
         val currentState = getState()
-        if (currentState != State.ACTIVE) {
-            // WAITING/INACTIVE 期间更新坐标但不劫持；超时不在此处判定，统一在 WAITING→ACTIVE 时检查
-            if (currentState == State.WAITING) {
-                syncPointers(event, registerNew = false)
+        if (currentState == State.ACTIVE) {
+            if (event.eventTime - waitingEnteredTimeMs >= callbacks.gestureTimeoutMs()) {
+                // 超时：清空录制、注入 CANCEL、进入 HIJACK（保留指针追踪）
+                handoff.clear()
+                handoff.injectCancel(context)
+                callbacks.log("Gesture timeout (${event.eventTime - waitingEnteredTimeMs}ms), entering HIJACK")
+                enterHijack()
+                return true
             }
-            return false
+            syncPointers(event, registerNew = false)
+            handoff.record(event)
+            return true
         }
-        syncPointers(event, registerNew = false)
-        handoff.record(event)
-        return true
+        if (currentState == State.HIJACK) {
+            syncPointers(event, registerNew = false)
+            return true
+        }
+        // WAITING/INACTIVE 期间更新坐标但不劫持
+        if (currentState == State.WAITING) {
+            syncPointers(event, registerNew = false)
+        }
+        return false
     }
 
     private fun handlePointerUp(event: MotionEvent, context: Context): Boolean {
