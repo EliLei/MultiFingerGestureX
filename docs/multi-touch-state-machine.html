@@ -135,31 +135,38 @@ stateDiagram-v2
 
   <!-- 2. WAITING → ACTIVE：注入 CANCEL -->
   <section class="card">
-    <h2><span class="num">2</span> WAITING → ACTIVE：注入 ACTION_CANCEL</h2>
+    <h2><span class="num">2</span> WAITING → ACTIVE：注入 ACTION_CANCEL + off-screen 抬起</h2>
     <p class="lead">
       <span class="st waiting">WAITING</span> 期间所有事件透传给 App，App 已持有进行中的触摸。当 <code class="inline">POINTER_DOWN</code> 使手指数达到
-      <code class="inline">min</code> 阈值，立即转入 <span class="st active">ACTIVE</span> 并注入一个 <code class="inline">ACTION_CANCEL</code>
-      （携带当前所有按下手指的坐标 + 序列 downTime），取消 App 端触摸；同时取消 waitingTimeout 计时器。
+      <code class="inline">min</code> 阈值，立即转入 <span class="st active">ACTIVE</span>：先注入 <code class="inline">ACTION_CANCEL</code>
+      （携带当前所有按下手指的坐标 + 序列 downTime）取消 App 端触摸，<strong>随后注入连贯的多指抬起序列把每根手指抬离屏幕</strong>
+      （<code class="inline">POINTER_UP</code> ×N−1 + <code class="inline">UP</code> ×1，每指坐标置屏幕右下角之外）；同时取消 waitingTimeout 计时器。
     </p>
     <div class="mermaid">
 flowchart TD
     A["POINTER_DOWN（处于 WAITING）"] --> B{"pointers.size ≥ min 阈值 ?"}
     B -- 否 --> C["留 WAITING\n（透传，不消费）"]
-    B -- 是 --> D["enterActive()"]
-    D --> E["state → ACTIVE\n取消 waitingTimeout"]
-    E --> F["handoff.injectCancel\n(downTime, eventTime, 当前所有按下手指坐标)"]
-    F --> G["ACTIVE：劫持并丢弃后续事件\n（仅内部 syncPointers 追踪指针）"]
+    B -- 是 --> D["enterActive()：state → ACTIVE\n取消 waitingTimeout"]
+    D --> F["injectCancel：ACTION_CANCEL\n携带当前所有按下手指坐标"]
+    F --> H["injectLiftOffscreen：连贯抬起序列\nPOINTER_UP×(N−1) + UP×1\n每指坐标置 off-screen"]
+    H --> G["ACTIVE：劫持并丢弃后续事件\n（仅内部 syncPointers 追踪指针）"]
 
     classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef toActive fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef cancel fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef lift fill:#dcfce7,stroke:#16a34a,color:#14532d
     class B decision
-    class D,E toActive
+    class D toActive
     class F cancel
+    class H lift
     </div>
     <p class="lead" style="margin-top:16px;">
       CANCEL 指针集 = <strong>当前仍按下的手指</strong>（<code class="inline">pointers</code> 中各项的 <code class="inline">currentX/Y</code>）。
-      WAITING 期间已抬起的“忽略”手指此前已收到 <code class="inline">POINTER_UP</code>，App 不再追踪，故不纳入 CANCEL。
+      WAITING 期间已抬起的“忽略”手指此前已收到 <code class="inline">POINTER_UP</code>，App 不再追踪，故不纳入。
+    </p>
+    <p class="lead" style="margin-top:8px;">
+      抬起序列按真实多指抬起顺序构造（始终抬起当前指针集第 0 个，<code class="inline">actionIndex=0</code>），指针集逐个递减，
+      各事件共享序列 downTime、eventTime 自触发事件起 +1ms 递增。off-screen 坐标取 <code class="inline">displayMetrics</code> 屏幕右下角之外。
     </p>
   </section>
 
