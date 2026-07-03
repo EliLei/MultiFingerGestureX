@@ -85,6 +85,7 @@ jobs:
           GH_TOKEN: ${{ secrets.XPOSED_REPO_PAT }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
+          APK_PATH: ${{ steps.apk.outputs.path }}
         run: |
           # Fetch changelog from the release just created
           CHANGELOG=$(gh release view "v${VERSION_NAME}" \
@@ -97,4 +98,5 @@ jobs:
           gh release create "${VERSION_CODE}" \
             --repo "Xposed-Modules-Repo/com.eli.mfgx" \
             --title "${VERSION_NAME}" \
-            --notes "${CHANGELOG:-Release ${VERSION_NAME}}"
+            --notes "${CHANGELOG:-Release ${VERSION_NAME}}" \
+            "${APK_PATH}"
