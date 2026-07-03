@@ -77,6 +77,28 @@ internal class EventReplayHandoff(
         return injectEvent(context, MotionEvent.ACTION_CANCEL, 0, last, last.eventTime)
     }
 
+    /**
+     * 注入 ACTION_CANCEL，携带显式给出的指针坐标（用于 WAITING→ACTIVE 时取消 App 端进行中的触摸）。
+     * 不依赖 recorded 列表。[pointers] 为当前所有按下手指；[downTime] 为序列起始 downTime。
+     */
+    fun injectCancel(
+        context: Context,
+        downTime: Long,
+        eventTime: Long,
+        pointers: List<PointerCoords>,
+    ): Boolean {
+        if (pointers.isEmpty()) return false
+        val rec = MotionEventRecord(
+            actionMasked = MotionEvent.ACTION_CANCEL,
+            actionIndex = 0,
+            downTime = downTime,
+            eventTime = eventTime,
+            pointers = pointers,
+            metaState = 0,
+        )
+        return injectEvent(context, MotionEvent.ACTION_CANCEL, 0, rec, eventTime)
+    }
+
     /** 按记录顺序重放全部事件。 */
     fun replayAll(context: Context): Boolean {
         val toReplay: List<MotionEventRecord>

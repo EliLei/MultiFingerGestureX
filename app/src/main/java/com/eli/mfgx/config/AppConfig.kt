@@ -5,7 +5,6 @@ object AppConfig {
 
     // Top-level flags
     const val GESTURES_ENABLED = "gestures_enabled"
-    const val DEBUG_MATRIX = "debug_matrix_enabled"
     const val THEME_PRESET = "theme_preset"
     const val THEME_CUSTOM_COLOR = "theme_custom_color"
     const val UI_ACCENT = "ui_accent"
@@ -63,8 +62,6 @@ object AppConfig {
     const val GESTURE_WAITING_TIMEOUT_MS = "gesture_waiting_timeout_ms"
     const val GESTURE_SPEED_THRESHOLD = "gesture_speed_threshold"
     const val GESTURE_WAITING_TIMEOUT_MS_DEFAULT = 100
-    const val GESTURE_TIMEOUT_MS = "gesture_timeout_ms"
-    const val GESTURE_TIMEOUT_MS_DEFAULT = 200
     val GESTURE_SPEED_THRESHOLD_DEFAULT = 1.5f
 
     fun gestureEnabledKey(count: Int, type: String) = "gesture_${count}_${type}_enabled"

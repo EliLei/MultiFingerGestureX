@@ -56,7 +56,6 @@ It is intended for rooted LSPosed users who want to trigger actions with multi-f
 
 ## Usage Tips
 
-- Enable debug mode first if you want to verify gesture detection in real time.
 - If gestures do not trigger, check the LSPosed scopes, module enablement, and whether the device was rebooted after enabling the module.
 - Use the in-app SystemUI restart entry after changing hook-side behavior.
 

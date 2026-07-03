@@ -50,7 +50,6 @@ import com.eli.mfgx.ui.compose.components.EdgeXIcons
 import com.eli.mfgx.ui.compose.components.EdgeXListGroup
 import com.eli.mfgx.ui.compose.components.EdgeXRow
 import com.eli.mfgx.ui.compose.components.EdgeXSwitch
-import com.eli.mfgx.ui.compose.components.EdgeXSwitchRow
 import com.eli.mfgx.ui.compose.components.EdgeXTile
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.theme.EdgeXRadius
@@ -61,7 +60,6 @@ data class HomeCallbacks(
     val openRoute: (EdgeXRoute) -> Unit,
     val showToast: (String) -> Unit,
     val restartSystemUi: () -> Unit,
-    val setDebug: (Boolean) -> Unit,
     val setHaptic: (Boolean) -> Unit,
     val setHapticType: (String) -> Unit,
     val setArcDrawer: (Boolean) -> Unit,
@@ -296,14 +294,6 @@ private fun AdvancedSettings(state: HomeUiState, callbacks: HomeCallbacks) {
     )
 
     EdgeXListGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
-        EdgeXSwitchRow(
-            title = stringResource(R.string.menu_debug_matrix),
-            subtitle = stringResource(R.string.menu_debug_matrix_desc),
-            checked = state.debug,
-            onCheckedChange = callbacks.setDebug,
-            icon = EdgeXIcons.DeveloperMode,
-        )
-        EdgeXDivider()
         EdgeXRow(
             title = stringResource(R.string.menu_haptic_feedback),
             subtitle = if (state.haptic) hapticTypeLabel else stringResource(R.string.menu_haptic_feedback_desc),

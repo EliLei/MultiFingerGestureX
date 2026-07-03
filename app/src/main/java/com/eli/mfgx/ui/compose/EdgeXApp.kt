@@ -63,7 +63,6 @@ enum class EdgeXRoute(@StringRes val labelRes: Int) {
 data class HomeUiState(
     val stats: HomeStats,
     val gesturesEnabled: Boolean,
-    val debug: Boolean,
     val haptic: Boolean,
     val hapticType: String,
     val moduleActive: Boolean,
@@ -159,10 +158,6 @@ fun EdgeXApp() {
                                 restartSystemUi {
                                     showToast(restartSystemUiFailed)
                                 }
-                            },
-                            setDebug = {
-                                context.putConfig(AppConfig.DEBUG_MATRIX, it)
-                                refresh()
                             },
                             setHaptic = {
                                 context.putConfig(AppConfig.HAPTIC_FEEDBACK, it)
@@ -274,7 +269,6 @@ private fun Context.readHomeUiState(): HomeUiState =
     HomeUiState(
         stats = readHomeStats(),
         gesturesEnabled = getConfigBool(AppConfig.GESTURES_ENABLED),
-        debug = getConfigBool(AppConfig.DEBUG_MATRIX),
         haptic = getConfigBool(AppConfig.HAPTIC_FEEDBACK, default = true),
         hapticType = getConfigString(
             AppConfig.HAPTIC_FEEDBACK_TYPE,

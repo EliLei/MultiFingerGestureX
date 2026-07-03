@@ -51,7 +51,6 @@ object EdgeXIcons {
     @DrawableRes val SideBarLeft = R.drawable.ic_side_bar_left
     @DrawableRes val SideBarRight = R.drawable.ic_side_bar_right
     @DrawableRes val Settings = R.drawable.ic_settings
-    @DrawableRes val DeveloperMode = R.drawable.ic_developer_mode
     @DrawableRes val ArcDrawer = R.drawable.ic_arc_drawer
     @DrawableRes val About = R.drawable.ic_about
     @DrawableRes val Person = R.drawable.ic_person

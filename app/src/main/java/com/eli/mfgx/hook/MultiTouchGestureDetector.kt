@@ -7,16 +7,15 @@ import android.view.MotionEvent
 /**
  * 多指手势状态机。
  *
- * 状态：INACTIVE → WAITING → ACTIVE → (判定) → BLOCKING / INACTIVE
- *                         ACTIVE → (超时) → HIJACK → (抬手判定) → BLOCKING
- * 两个超时均使用 Handler 计时器：自 ACTION_DOWN 起 arm，到点触发（无需事件到来）。
- * waitingTimeout 到点若仍 WAITING → INACTIVE；进入 ACTIVE 取消该计时器。
- * gestureTimeout 到点若仍 ACTIVE → 清空录制、注入 CANCEL、进入 HIJACK；reset/enterBlocking 取消全部计时器。
- * ACTIVE 结束时判定手势：有效 → 执行动作 + 注入 CANCEL + BLOCKING；无效 → 重放事件 + INACTIVE。
- * ACTIVE 期间新增手指数超过 maxEnabledFingerCount 时，立即 replayAll 重放历史并回 INACTIVE（不等首个抬手判定）。
- * HIJACK：劫持残余事件但不录制、不回放；继续追踪指针位置；抬指时仍运行手势识别（有效则派发动作），识别后进入 BLOCKING。
- * BLOCKING：劫持并抛弃除 ACTION_DOWN / ACTION_CANCEL 外的所有事件；收到 DOWN 同 INACTIVE 进入 WAITING，CANCEL 回 INACTIVE。
- * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
+ * 状态：INACTIVE → WAITING → ACTIVE → BLOCKING → INACTIVE
+ *
+ * - waitingTimeout 使用 Handler 计时器：自 ACTION_DOWN 起 arm，到点若仍 WAITING → INACTIVE；进入 ACTIVE 取消该计时器。
+ * - WAITING → ACTIVE（POINTER_DOWN 使手指数达 min 阈值）：立即注入 ACTION_CANCEL（携带当前所有按下手指），
+ *   取消 App 端进行中的触摸序列；取消 waitingTimeout 计时器。
+ * - ACTIVE：劫持并丢弃所有事件（仅内部追踪指针位置用于识别），直至 POINTER_UP / ACTION_UP 运行手势识别。
+ *   识别有效且已配置 → 派发动作；无论识别结果如何一律进入 BLOCKING。不再录制、不再重放。
+ * - BLOCKING：劫持并抛弃除 ACTION_UP（收尾 → INACTIVE）与 ACTION_DOWN（开启新序列）外的所有事件。
+ * - 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
  *
  * 线程安全：所有公开方法线程安全，可在 InputManagerService hook 线程调用。
  */
@@ -24,7 +23,6 @@ internal class MultiTouchGestureDetector(
     private val handoff: EventReplayHandoff,
     private val callbacks: Callbacks,
     private val handler: Handler,
-    private val contextProvider: () -> Context,
 ) {
     interface Callbacks {
         /** 所有 enabled=true 手势中最小的手指数；无任何启用时返回 null。 */
@@ -37,13 +35,11 @@ internal class MultiTouchGestureDetector(
         fun smallThreshold(): Int
         fun largeThreshold(): Int
         fun waitingTimeoutMs(): Int
-        /** ACTIVE 手势整体超时（自第一指落下起算），默认 200ms。 */
-        fun gestureTimeoutMs(): Int
         fun speedThreshold(): Float
         fun log(message: String)
     }
 
-    private enum class State { INACTIVE, WAITING, ACTIVE, BLOCKING, HIJACK }
+    private enum class State { INACTIVE, WAITING, ACTIVE, BLOCKING }
 
     private data class PointerInfo(
         val pointerId: Int,
@@ -56,7 +52,8 @@ internal class MultiTouchGestureDetector(
 
     // LinkedHashMap 保持插入顺序，确保手势判定一致性
     private val pointers = LinkedHashMap<Int, PointerInfo>()
-    private val ignoredIds = mutableSetOf<Int>()
+    // 当前触摸序列的 downTime（取自 ACTION_DOWN），用于构造注入的 ACTION_CANCEL
+    private var downTime: Long = 0L
     @Volatile private var state = State.INACTIVE
 
     // 状态锁 - 保护所有可变状态访问
@@ -68,43 +65,24 @@ internal class MultiTouchGestureDetector(
             if (state == State.WAITING) {
                 state = State.INACTIVE
                 pointers.clear()
-                ignoredIds.clear()
+                downTime = 0L
                 true
             } else false
         }
         if (triggered) {
             callbacks.log("Waiting timeout (timer)")
-            handoff.clear()
-            cancelTimeouts()
+            cancelWaitingTimeout()
         }
     }
 
-    // gestureTimeout 计时器：到点若仍 ACTIVE 则注入 CANCEL + 清录制 + → HIJACK（原子 claim）
-    private val gestureTimeoutRunnable = Runnable {
-        val ctx = contextProvider()
-        val triggered = synchronized(stateLock) {
-            if (state == State.ACTIVE) {
-                state = State.HIJACK
-                true
-            } else false
-        }
-        if (!triggered) return@Runnable
-        callbacks.log("Gesture timeout (timer), entering HIJACK")
-        handoff.injectCancel(ctx)
-        handoff.clear()
-        cancelTimeouts()
-    }
-
-    /** 在 ACTION_DOWN 调用：arm 两个超时计时器（自此刻起算）。 */
-    private fun armTimeouts() {
+    /** 在 ACTION_DOWN 调用：arm waitingTimeout 计时器（自此刻起算）。 */
+    private fun armWaitingTimeout() {
         handler.postDelayed(waitingTimeoutRunnable, callbacks.waitingTimeoutMs().toLong())
-        handler.postDelayed(gestureTimeoutRunnable, callbacks.gestureTimeoutMs().toLong())
     }
 
-    /** 取消两个超时计时器（幂等）。 */
-    private fun cancelTimeouts() {
+    /** 取消 waitingTimeout 计时器（幂等）。 */
+    private fun cancelWaitingTimeout() {
         handler.removeCallbacks(waitingTimeoutRunnable)
-        handler.removeCallbacks(gestureTimeoutRunnable)
     }
 
     fun handle(event: MotionEvent, context: Context): Boolean {
@@ -114,15 +92,24 @@ internal class MultiTouchGestureDetector(
             return false // CANCEL 不消费，交系统处理
         }
 
-        // BLOCKING：劫持并抛弃除 ACTION_DOWN（开启新序列）外的所有事件
-        if (getState() == State.BLOCKING && event.actionMasked != MotionEvent.ACTION_DOWN) {
-            return true // 消费并丢弃，阻断本次手势序列的残余事件
+        val currentState = getState()
+
+        // BLOCKING：劫持并抛弃除 ACTION_UP（收尾回 INACTIVE）与 ACTION_DOWN（开启新序列）外的所有事件
+        if (currentState == State.BLOCKING) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_UP -> {
+                    reset()
+                    return true // 消费并丢弃，序列结束 → INACTIVE
+                }
+                MotionEvent.ACTION_DOWN -> { /* 落入下方 handleDown 开启新序列 */ }
+                else -> return true // 消费并丢弃，阻断残余事件
+            }
         }
 
         return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> handleDown(event)
             MotionEvent.ACTION_POINTER_DOWN -> handlePointerDown(event, context)
-            MotionEvent.ACTION_MOVE -> handleMove(event, context)
+            MotionEvent.ACTION_MOVE -> handleMove(event)
             MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event, context)
             MotionEvent.ACTION_UP -> handleUp(event, context)
             else -> false
@@ -130,22 +117,20 @@ internal class MultiTouchGestureDetector(
     }
 
     fun reset() {
-        cancelTimeouts()
+        cancelWaitingTimeout()
         synchronized(stateLock) {
             state = State.INACTIVE
             pointers.clear()
-            ignoredIds.clear()
+            downTime = 0L
         }
-        handoff.clear()
     }
 
-    // 有效手势触发后进入：清空指针数据但保持 handoff 已注入的 CANCEL 生效，阻断残余事件
+    // 有效手势触发后进入：清空指针数据，阻断残余事件
     private fun enterBlocking() {
-        cancelTimeouts()
+        cancelWaitingTimeout()
         synchronized(stateLock) {
             state = State.BLOCKING
             pointers.clear()
-            ignoredIds.clear()
         }
     }
 
@@ -160,19 +145,18 @@ internal class MultiTouchGestureDetector(
         val now = event.eventTime
 
         synchronized(stateLock) {
+            downTime = event.downTime
             pointers[pid] = PointerInfo(pid, x, y, x, y, now)
             state = State.WAITING
         }
-        armTimeouts()
+        armWaitingTimeout()
         return false // WAITING 不劫持
     }
 
     private fun handlePointerDown(event: MotionEvent, context: Context): Boolean {
         if (getState() == State.INACTIVE) return false
 
-        val idx = event.actionIndex
-        val pid = event.getPointerId(idx)
-        // 同步所有指针当前位置并注册新指针（对 WAITING/ACTIVE/HIJACK 统一执行）
+        // 同步所有指针当前位置并注册新指针（对 WAITING/ACTIVE 统一执行）
         syncPointers(event, registerNew = true)
 
         val currentState = getState()
@@ -183,50 +167,32 @@ internal class MultiTouchGestureDetector(
                 pointerCount = pointers.size
             }
             if (threshold != null && pointerCount >= threshold) {
-                // 进入 ACTIVE，本次 POINTER_DOWN 也被劫持记录；取消 waiting 计时器（gesture 计时器继续）
-                setState(State.ACTIVE)
-                handler.removeCallbacks(waitingTimeoutRunnable)
-                handoff.record(event)
+                // 达阈值 → ACTIVE：注入 ACTION_CANCEL 取消 App 端触摸，取消 waiting 计时器
+                enterActive(context, event.eventTime)
                 return true // 消费
             }
-            return false // 仍在 WAITING，不劫持
+            return false // 仍在 WAITING，透传
         }
 
-        if (currentState == State.ACTIVE) {
-            // 超限检查优先——确定不可识别 → replay + INACTIVE
-            val max = callbacks.maxEnabledFingerCount()
-            val pointerCount: Int
-            synchronized(stateLock) {
-                pointerCount = pointers.size
-            }
-            if (max != null && pointerCount > max) {
-                handoff.record(event)
-                handoff.replayAll(context)
-                callbacks.log("Fingers $pointerCount > enabled max $max, replayed -> INACTIVE")
-                reset()
-                return true
-            }
-            handoff.record(event)
+        // ACTIVE：超过最大手指数 → 手势识别失败，直接进入 BLOCKING；否则劫持丢弃，等待抬手判定
+        val max = callbacks.maxEnabledFingerCount()
+        val pointerCount: Int
+        synchronized(stateLock) {
+            pointerCount = pointers.size
+        }
+        if (max != null && pointerCount > max) {
+            callbacks.log("Fingers $pointerCount > enabled max $max, gesture failed -> BLOCKING")
+            enterBlocking()
             return true
         }
-
-        if (currentState == State.HIJACK) {
-            // HIJACK 不录制（syncPointers 已在前方统一调用），直接消费
-            return true
-        }
-        return false
+        return true
     }
 
-    private fun handleMove(event: MotionEvent, context: Context): Boolean {
+    private fun handleMove(event: MotionEvent): Boolean {
         val currentState = getState()
         if (currentState == State.ACTIVE) {
             syncPointers(event, registerNew = false)
-            handoff.record(event)
-            return true
-        }
-        if (currentState == State.HIJACK) {
-            syncPointers(event, registerNew = false)
-            return true
+            return true // 劫持丢弃
         }
         // WAITING/INACTIVE 期间更新坐标但不劫持
         if (currentState == State.WAITING) {
@@ -242,20 +208,14 @@ internal class MultiTouchGestureDetector(
 
         val currentState = getState()
         if (currentState == State.WAITING) {
-            // 进入 ACTIVE 前抬起的指针标记忽略
+            // 进入 ACTIVE 前抬起的指针移除（透传给 App）
             synchronized(stateLock) {
-                ignoredIds.add(pid)
                 pointers.remove(pid)
             }
             return false
         }
         if (currentState == State.ACTIVE) {
-            handoff.record(event)
             finishGesture(event, context)
-            return true
-        }
-        if (currentState == State.HIJACK) {
-            finishHijack(event, context)
             return true
         }
         return false
@@ -265,12 +225,7 @@ internal class MultiTouchGestureDetector(
         syncPointers(event, registerNew = false)
         val currentState = getState()
         if (currentState == State.ACTIVE) {
-            handoff.record(event)
             finishGesture(event, context)
-            return true
-        }
-        if (currentState == State.HIJACK) {
-            finishHijack(event, context)
             return true
         }
         // WAITING 或 INACTIVE：最后一个手指抬起，结束序列
@@ -280,30 +235,32 @@ internal class MultiTouchGestureDetector(
 
     private fun getState(): State = state
 
-    private fun setState(newState: State) {
+    /**
+     * WAITING → ACTIVE 转换：注入 ACTION_CANCEL（携带当前所有按下手指的坐标）取消 App 端进行中的触摸，
+     * 取消 waitingTimeout 计时器。CANCEL 使用序列 downTime 与各指针当前位置。
+     */
+    private fun enterActive(context: Context, eventTime: Long) {
+        val coords: List<EventReplayHandoff.PointerCoords>
+        val dt: Long
         synchronized(stateLock) {
-            state = newState
+            state = State.ACTIVE
+            dt = downTime
+            coords = pointers.values.map {
+                EventReplayHandoff.PointerCoords(it.pointerId, it.currentX, it.currentY)
+            }
         }
+        cancelWaitingTimeout()
+        handoff.injectCancel(context, dt, eventTime, coords)
+        callbacks.log("Entered ACTIVE (${coords.size} fingers), injected CANCEL")
     }
 
+    /**
+     * ACTIVE 抬手判定：运行手势识别（有效且已配置则派发动作），无论结果一律进入 BLOCKING。
+     * 不重放、不再注入 CANCEL（已在进入 ACTIVE 时注入）。
+     */
     private fun finishGesture(event: MotionEvent, context: Context) {
-        // 重检 state：gestureTimeoutRunnable（主线程）可能在调用方读取 ACTIVE 之后、
-        // 进入此方法之前已 claim 为 HIJACK。若已离开 ACTIVE，交由 HIJACK 路径收尾，
-        // 避免 finishGesture 与计时器双重 injectCancel / 重复派发。
-        val stateAtEntry = synchronized(stateLock) { state }
-        if (stateAtEntry != State.ACTIVE) {
-            if (stateAtEntry == State.HIJACK) finishHijack(event, context)
-            return
-        }
-        // 有效指针 = 当前仍在 pointers 中（含本次抬起的，因为 syncPointers 后未移除）
-        val valid: List<PointerInfo>
-        val ignored: Set<Int>
-        synchronized(stateLock) {
-            valid = pointers.values.filterNot { ignoredIds.contains(it.pointerId) }
-            ignored = ignoredIds.toSet() // Copy for thread-safe access outside lock
-        }
+        val valid: List<PointerInfo> = synchronized(stateLock) { pointers.values.toList() }
 
-        val endTimeMs = event.eventTime
         val snapshots = valid.map {
             MultiTouchGestureRecognizer.PointerSnapshot(
                 it.pointerId, it.startX, it.startY, it.currentX, it.currentY, it.startTimeMs
@@ -311,7 +268,7 @@ internal class MultiTouchGestureDetector(
         }
         val result = MultiTouchGestureRecognizer.recognize(
             snapshots,
-            endTimeMs,
+            event.eventTime,
             callbacks.smallThreshold().toFloat(),
             callbacks.largeThreshold().toFloat(),
             callbacks.speedThreshold(),
@@ -320,56 +277,13 @@ internal class MultiTouchGestureDetector(
         if (result != null) {
             val effective = resolveEffectiveType(result.fingerCount, result.type)
             if (effective != null) {
-                // 有效：注入 CANCEL（须在 clear 之前，injectCancel 依赖 recorded 中最后事件的坐标），
-                // 清空记录，执行动作，进入 BLOCKING 阻断后续事件
-                handoff.injectCancel(context)
-                handoff.clear()
                 callbacks.dispatchAction(result.fingerCount, effective, context)
                 callbacks.log("Gesture: ${result.fingerCount}x ${effective.key}")
-                enterBlocking()
             } else {
-                // 无效：重放记录，回到 INACTIVE
-                handoff.replayAll(context)
-                callbacks.log("Gesture invalid, replayed (${result.fingerCount}x ${result.type.key} disabled)")
-                reset()
+                callbacks.log("Gesture invalid (${result.fingerCount}x ${result.type.key} disabled)")
             }
         } else {
-            // 无效：重放记录，回到 INACTIVE
-            handoff.replayAll(context)
-            callbacks.log("Gesture invalid, replayed (no match)")
-            reset()
-        }
-    }
-
-    /**
-     * HIJACK 抬手判定：运行手势识别（有效则派发动作），识别后一律进入 BLOCKING。
-     * 不重放（handoff 已空）、不注入 CANCEL（进入 HIJACK 时已注入）。
-     */
-    private fun finishHijack(event: MotionEvent, context: Context) {
-        // 有效指针 = 当前仍在 pointers 中
-        val valid: List<PointerInfo>
-        synchronized(stateLock) {
-            valid = pointers.values.filterNot { ignoredIds.contains(it.pointerId) }
-        }
-
-        val snapshots = valid.map {
-            MultiTouchGestureRecognizer.PointerSnapshot(
-                it.pointerId, it.startX, it.startY, it.currentX, it.currentY, it.startTimeMs
-            )
-        }
-        val result = MultiTouchGestureRecognizer.recognize(
-            snapshots, event.eventTime,
-            callbacks.smallThreshold().toFloat(),
-            callbacks.largeThreshold().toFloat(),
-            callbacks.speedThreshold(),
-        )
-
-        if (result != null) {
-            val effective = resolveEffectiveType(result.fingerCount, result.type)
-            if (effective != null) {
-                callbacks.dispatchAction(result.fingerCount, effective, context)
-                callbacks.log("Gesture (hijack): ${result.fingerCount}x ${effective.key}")
-            }
+            callbacks.log("Gesture invalid (no match)")
         }
         // 无论识别结果，一律进入 BLOCKING
         enterBlocking()
