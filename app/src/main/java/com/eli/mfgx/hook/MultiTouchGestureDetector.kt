@@ -9,11 +9,11 @@ import android.view.MotionEvent
  *
  * 状态：INACTIVE → WAITING → ACTIVE → (判定) → BLOCKING / INACTIVE
  *                         ACTIVE → (超时) → HIJACK → (抬手判定) → BLOCKING
- * WAITING 超时采用事件时间判定（无计时器）：仅在凑齐阈值进入 ACTIVE 的瞬间检查 eventTime，
- * 自第一指落下超过 [Callbacks.waitingTimeoutMs] 则作废 → INACTIVE。
+ * 两个超时均使用 Handler 计时器：自 ACTION_DOWN 起 arm，到点触发（无需事件到来）。
+ * waitingTimeout 到点若仍 WAITING → INACTIVE；进入 ACTIVE 取消该计时器。
+ * gestureTimeout 到点若仍 ACTIVE → 清空录制、注入 CANCEL、进入 HIJACK；reset/enterBlocking 取消全部计时器。
  * ACTIVE 结束时判定手势：有效 → 执行动作 + 注入 CANCEL + BLOCKING；无效 → 重放事件 + INACTIVE。
  * ACTIVE 期间新增手指数超过 maxEnabledFingerCount 时，立即 replayAll 重放历史并回 INACTIVE（不等首个抬手判定）。
- * ACTIVE 期间自第一指落下超过 gestureTimeoutMs 时，清空录制、注入 CANCEL、进入 HIJACK。
  * HIJACK：劫持残余事件但不录制、不回放；继续追踪指针位置；抬指时仍运行手势识别（有效则派发动作），识别后进入 BLOCKING。
  * BLOCKING：劫持并抛弃除 ACTION_DOWN / ACTION_CANCEL 外的所有事件；收到 DOWN 同 INACTIVE 进入 WAITING，CANCEL 回 INACTIVE。
  * 任意状态收到 ACTION_CANCEL：清理全部数据 → INACTIVE。
