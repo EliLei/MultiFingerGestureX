@@ -404,6 +404,45 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             input.toFloatOrNull()?.let { context.putConfig(AppConfig.GESTURE_SPEED_THRESHOLD, it.toString()) }
         },
     )
+
+    // Inject order toggle
+    var liftBeforeCancel by remember {
+        mutableStateOf(
+            prefs.getString(AppConfig.GESTURE_INJECT_LIFT_BEFORE_CANCEL, "true") != "false"
+        )
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.label_lift_before_cancel),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = stringResource(R.string.desc_lift_before_cancel),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = liftBeforeCancel,
+                onCheckedChange = { checked ->
+                    liftBeforeCancel = checked
+                    context.putConfig(AppConfig.GESTURE_INJECT_LIFT_BEFORE_CANCEL, checked)
+                },
+            )
+        }
+    }
 }
 
 // 屏幕物理尺寸（宽 × 高 px），用于阈值标定参考

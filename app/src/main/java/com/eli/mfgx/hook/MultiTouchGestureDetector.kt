@@ -10,8 +10,8 @@ import android.view.MotionEvent
  * 状态：INACTIVE → WAITING → ACTIVE → BLOCKING → INACTIVE
  *
  * - waitingTimeout 使用 Handler 计时器：自 ACTION_DOWN 起 arm，到点若仍 WAITING → INACTIVE；进入 ACTIVE 取消该计时器。
- * - WAITING → ACTIVE（POINTER_DOWN 使手指数达 min 阈值）：注入 ACTION_CANCEL（携带当前所有按下手指）取消 App 端触摸，
- *   随后为每根手指注入连贯的 off-screen 抬起序列（POINTER_UP ×N−1 + UP ×1）将其抬离屏幕；取消 waitingTimeout 计时器。
+ * - WAITING → ACTIVE（POINTER_DOWN 使手指数达 min 阈值）：取消 waitingTimeout 计时器；
+ *   根据 [Callbacks.liftBeforeCancel] 决定先注入 off-screen 抬起序列还是先注入 ACTION_CANCEL。
  * - ACTIVE：劫持并丢弃所有事件（仅内部追踪指针位置用于识别），直至 POINTER_UP / ACTION_UP 运行手势识别。
  *   识别有效且已配置 → 派发动作；无论识别结果如何一律进入 BLOCKING。不再录制、不再重放。
  * - BLOCKING：劫持并抛弃除 ACTION_UP（收尾 → INACTIVE）与 ACTION_DOWN（开启新序列）外的所有事件。
@@ -36,6 +36,8 @@ internal class MultiTouchGestureDetector(
         fun largeThreshold(): Int
         fun waitingTimeoutMs(): Int
         fun speedThreshold(): Float
+        /** true = 先 injectLiftOffscreen 再 injectCancel；false = 先取消再抬起 */
+        fun liftBeforeCancel(): Boolean
         fun log(message: String)
     }
 
@@ -237,9 +239,10 @@ internal class MultiTouchGestureDetector(
 
     /**
      * WAITING → ACTIVE 转换：
-     * 1) 为每根手指注入连贯的 off-screen 抬起序列（POINTER_UP ×N−1 + UP ×1），将其抬离屏幕；
-     * 2) 注入 ACTION_CANCEL（携带当前所有按下手指的坐标）取消 App 端进行中的触摸；
-     * 3) 取消 waitingTimeout 计时器。
+     * 1) 取消 waitingTimeout 计时器；
+     * 2) 根据 [Callbacks.liftBeforeCancel] 决定注入顺序：
+     *    - true：先 injectLiftOffscreen（POINTER_UP ×N−1 + UP ×1）再 injectCancel
+     *    - false：先 injectCancel 再 injectLiftOffscreen
      * 均使用序列 downTime 与各指针当前位置；off-screen 坐标取屏幕右下角之外。
      */
     private fun enterActive(context: Context, eventTime: Long) {
@@ -253,14 +256,18 @@ internal class MultiTouchGestureDetector(
             }
         }
         cancelWaitingTimeout()
-        // 先为每根已按下手指注入 off-screen 抬起序列，将其彻底抬离屏幕
         val dm = context.resources.displayMetrics
         val offX = dm.widthPixels + 1f
         val offY = dm.heightPixels + 1f
-        handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
-        // 再注入 ACTION_CANCEL 取消 App 端进行中的触摸
-        handoff.injectCancel(context, dt, eventTime, coords)
-        callbacks.log("Entered ACTIVE (${coords.size} fingers), injected off-screen lift + CANCEL")
+        if (callbacks.liftBeforeCancel()) {
+            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
+            handoff.injectCancel(context, dt, eventTime, coords)
+            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected off-screen lift + CANCEL")
+        } else {
+            handoff.injectCancel(context, dt, eventTime, coords)
+            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
+            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected CANCEL + off-screen lift")
+        }
     }
 
     /**

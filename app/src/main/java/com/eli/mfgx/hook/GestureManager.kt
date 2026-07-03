@@ -108,6 +108,9 @@ object GestureManager {
                         AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
                     ).toFloatOrNull() ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT
 
+                override fun liftBeforeCancel(): Boolean =
+                    configRepository.get(AppConfig.GESTURE_INJECT_LIFT_BEFORE_CANCEL, "true") != "false"
+
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
             handler = mainHandler(),

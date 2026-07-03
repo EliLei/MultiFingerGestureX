@@ -154,6 +154,8 @@
     <string name="label_waiting_timeout">Waiting Timeout</string>
     <string name="label_speed_threshold">Quick Swipe Speed</string>
     <string name="hint_screen_size">Screen size: %1$s</string>
+    <string name="label_lift_before_cancel">Lift before cancel</string>
+    <string name="desc_lift_before_cancel">Inject off-screen lift sequence before ACTION_CANCEL when multi-touch gesture activates. Disable to cancel first, then lift.</string>
     <string name="action_not_set">Not set</string>
 
     <!-- Action Selection Items -->

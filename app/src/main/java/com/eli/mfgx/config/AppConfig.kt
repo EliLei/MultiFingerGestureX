@@ -61,6 +61,7 @@ object AppConfig {
 
     const val GESTURE_WAITING_TIMEOUT_MS = "gesture_waiting_timeout_ms"
     const val GESTURE_SPEED_THRESHOLD = "gesture_speed_threshold"
+    const val GESTURE_INJECT_LIFT_BEFORE_CANCEL = "gesture_inject_lift_before_cancel"
     const val GESTURE_WAITING_TIMEOUT_MS_DEFAULT = 100
     val GESTURE_SPEED_THRESHOLD_DEFAULT = 1.5f
 
