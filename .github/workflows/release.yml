@@ -72,9 +72,29 @@ jobs:
           echo "path=$NEW_PATH" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
+        id: release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release in Xposed Modules Repo
+        env:
+          GH_TOKEN: ${{ secrets.XPOSED_REPO_PAT }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          # Fetch changelog from the release just created
+          CHANGELOG=$(gh release view "v${VERSION_NAME}" \
+            --repo "${{ github.repository }}" \
+            --json body -q ".body" 2>/dev/null || echo "")
+
+          # Create release in Xposed Modules Repo fork
+          # Tag = version code (must be numeric, increasing)
+          # Title = version name (human-readable)
+          gh release create "${VERSION_CODE}" \
+            --repo "Xposed-Modules-Repo/com.eli.mfgx" \
+            --title "${VERSION_NAME}" \
+            --notes "${CHANGELOG:-Release ${VERSION_NAME}}"
