@@ -237,8 +237,8 @@ internal class MultiTouchGestureDetector(
 
     /**
      * WAITING → ACTIVE 转换：
-     * 1) 注入 ACTION_CANCEL（携带当前所有按下手指的坐标）取消 App 端进行中的触摸；
-     * 2) 为每根手指注入连贯的 off-screen 抬起序列（POINTER_UP ×N−1 + UP ×1），将其抬离屏幕；
+     * 1) 为每根手指注入连贯的 off-screen 抬起序列（POINTER_UP ×N−1 + UP ×1），将其抬离屏幕；
+     * 2) 注入 ACTION_CANCEL（携带当前所有按下手指的坐标）取消 App 端进行中的触摸；
      * 3) 取消 waitingTimeout 计时器。
      * 均使用序列 downTime 与各指针当前位置；off-screen 坐标取屏幕右下角之外。
      */
@@ -253,13 +253,14 @@ internal class MultiTouchGestureDetector(
             }
         }
         cancelWaitingTimeout()
-        handoff.injectCancel(context, dt, eventTime, coords)
-        // 为每根已按下手指注入 off-screen 抬起序列，彻底抬离屏幕
+        // 先为每根已按下手指注入 off-screen 抬起序列，将其彻底抬离屏幕
         val dm = context.resources.displayMetrics
         val offX = dm.widthPixels + 1f
         val offY = dm.heightPixels + 1f
         handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
-        callbacks.log("Entered ACTIVE (${coords.size} fingers), injected CANCEL + off-screen lift")
+        // 再注入 ACTION_CANCEL 取消 App 端进行中的触摸
+        handoff.injectCancel(context, dt, eventTime, coords)
+        callbacks.log("Entered ACTIVE (${coords.size} fingers), injected off-screen lift + CANCEL")
     }
 
     /**
