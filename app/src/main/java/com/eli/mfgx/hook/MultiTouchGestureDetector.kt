@@ -320,9 +320,10 @@ internal class MultiTouchGestureDetector(
         if (result != null) {
             val effective = resolveEffectiveType(result.fingerCount, result.type)
             if (effective != null) {
-                // 有效：清空记录，注入 CANCEL，执行动作，进入 BLOCKING 阻断后续事件
-                handoff.clear()
+                // 有效：注入 CANCEL（须在 clear 之前，injectCancel 依赖 recorded 中最后事件的坐标），
+                // 清空记录，执行动作，进入 BLOCKING 阻断后续事件
                 handoff.injectCancel(context)
+                handoff.clear()
                 callbacks.dispatchAction(result.fingerCount, effective, context)
                 callbacks.log("Gesture: ${result.fingerCount}x ${effective.key}")
                 enterBlocking()

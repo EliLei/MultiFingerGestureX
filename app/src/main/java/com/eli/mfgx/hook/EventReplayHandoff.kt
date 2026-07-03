@@ -65,7 +65,10 @@ internal class EventReplayHandoff(
 
     fun isEmpty(): Boolean = recorded.isEmpty()
 
-    /** 注入 ACTION_CANCEL，携带当前（最后一次记录的）指针坐标。 */
+    /**
+     * 注入 ACTION_CANCEL，携带当前（最后一次记录的）指针坐标。
+     * 必须在 [clear] 之前调用：依赖 recorded 中最后一次事件的坐标，clear 后列表为空会返回 false（不注入）。
+     */
     fun injectCancel(context: Context): Boolean {
         val last: MotionEventRecord
         synchronized(recorded) {
