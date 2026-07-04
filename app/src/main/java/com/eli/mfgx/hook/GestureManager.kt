@@ -148,7 +148,8 @@ object GestureManager {
         try {
             val inputManager = context.getSystemService(InputManager::class.java)
                 ?: context.getSystemService(Context.INPUT_SERVICE) as? InputManager
-            val displayId = runCatching { context.getDisplayId() }.getOrDefault(Display.DEFAULT_DISPLAY)
+            // 模块运行在 system_server 默认 display，直接用 DEFAULT_DISPLAY(0)，避免依赖 Context.getDisplayId()
+            val displayId = Display.DEFAULT_DISPLAY
             val monitor = XposedHelpers.callMethod(
                 inputManager, "monitorGestureInput", "mfgx-gesture", displayId
             )
