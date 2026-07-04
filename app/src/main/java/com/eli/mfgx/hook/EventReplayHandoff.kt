@@ -77,75 +77,75 @@ internal class EventReplayHandoff(
         return injectEvent(context, MotionEvent.ACTION_CANCEL, 0, last, last.eventTime)
     }
 
-    /**
-     * 注入 ACTION_CANCEL，携带显式给出的指针坐标（用于 WAITING→ACTIVE 时取消 App 端进行中的触摸）。
-     * 不依赖 recorded 列表。[pointers] 为当前所有按下手指；[downTime] 为序列起始 downTime。
-     */
-    fun injectCancel(
-        context: Context,
-        downTime: Long,
-        eventTime: Long,
-        pointers: List<PointerCoords>,
-    ): Boolean {
-        if (pointers.isEmpty()) return false
-        val rec = MotionEventRecord(
-            actionMasked = MotionEvent.ACTION_CANCEL,
-            actionIndex = 0,
-            downTime = downTime,
-            eventTime = eventTime,
-            pointers = pointers,
-            metaState = 0,
-        )
-        return injectEvent(context, MotionEvent.ACTION_CANCEL, 0, rec, eventTime)
-    }
+//    /**
+//     * 注入 ACTION_CANCEL，携带显式给出的指针坐标（用于 WAITING→ACTIVE 时取消 App 端进行中的触摸）。
+//     * 不依赖 recorded 列表。[pointers] 为当前所有按下手指；[downTime] 为序列起始 downTime。
+//     */
+//    fun injectCancel(
+//        context: Context,
+//        downTime: Long,
+//        eventTime: Long,
+//        pointers: List<PointerCoords>,
+//    ): Boolean {
+//        if (pointers.isEmpty()) return false
+//        val rec = MotionEventRecord(
+//            actionMasked = MotionEvent.ACTION_CANCEL,
+//            actionIndex = 0,
+//            downTime = downTime,
+//            eventTime = eventTime,
+//            pointers = pointers,
+//            metaState = 0,
+//        )
+//        return injectEvent(context, MotionEvent.ACTION_CANCEL, 0, rec, eventTime)
+//    }
 
-    /**
-     * 注入连贯的多指抬起序列，把每根手指抬离屏幕（坐标置屏幕外）：
-     * 前 N−1 指 ACTION_POINTER_UP（始终抬起当前指针集第 0 个，actionIndex=0），最后一指 ACTION_UP。
-     * 用于 WAITING→ACTIVE 注入 ACTION_CANCEL 之后。各事件共享序列 downTime，eventTime 自 [baseEventTime] 起逐个 +1ms。
-     */
-    fun injectLiftOffscreen(
-        context: Context,
-        downTime: Long,
-        baseEventTime: Long,
-        pointers: List<PointerCoords>,
-        offX: Float,
-        offY: Float,
-    ): Boolean {
-        if (pointers.isEmpty()) return false
-        val remaining = pointers.toMutableList()
-        var allOk = true
-        var eventTime = baseEventTime
-        while (remaining.size > 1) {
-            // 抬起第 0 个：其坐标置 off-screen，其余保持当前位置
-            val coords = remaining.mapIndexed { idx, p ->
-                if (idx == 0) PointerCoords(p.id, offX, offY) else p
-            }
-            val rec = MotionEventRecord(
-                actionMasked = MotionEvent.ACTION_POINTER_UP,
-                actionIndex = 0,
-                downTime = downTime,
-                eventTime = eventTime,
-                pointers = coords,
-                metaState = 0,
-            )
-            if (!injectEvent(context, MotionEvent.ACTION_POINTER_UP, 0, rec, eventTime)) allOk = false
-            remaining.removeAt(0)
-            eventTime += 1
-        }
-        // 最后一指 ACTION_UP（off-screen）
-        val last = remaining.first()
-        val lastRec = MotionEventRecord(
-            actionMasked = MotionEvent.ACTION_UP,
-            actionIndex = 0,
-            downTime = downTime,
-            eventTime = eventTime,
-            pointers = listOf(PointerCoords(last.id, offX, offY)),
-            metaState = 0,
-        )
-        if (!injectEvent(context, MotionEvent.ACTION_UP, 0, lastRec, eventTime)) allOk = false
-        return allOk
-    }
+//    /**
+//     * 注入连贯的多指抬起序列，把每根手指抬离屏幕（坐标置屏幕外）：
+//     * 前 N−1 指 ACTION_POINTER_UP（始终抬起当前指针集第 0 个，actionIndex=0），最后一指 ACTION_UP。
+//     * 用于 WAITING→ACTIVE 注入 ACTION_CANCEL 之后。各事件共享序列 downTime，eventTime 自 [baseEventTime] 起逐个 +1ms。
+//     */
+//    fun injectLiftOffscreen(
+//        context: Context,
+//        downTime: Long,
+//        baseEventTime: Long,
+//        pointers: List<PointerCoords>,
+//        offX: Float,
+//        offY: Float,
+//    ): Boolean {
+//        if (pointers.isEmpty()) return false
+//        val remaining = pointers.toMutableList()
+//        var allOk = true
+//        var eventTime = baseEventTime
+//        while (remaining.size > 1) {
+//            // 抬起第 0 个：其坐标置 off-screen，其余保持当前位置
+//            val coords = remaining.mapIndexed { idx, p ->
+//                if (idx == 0) PointerCoords(p.id, offX, offY) else p
+//            }
+//            val rec = MotionEventRecord(
+//                actionMasked = MotionEvent.ACTION_POINTER_UP,
+//                actionIndex = 0,
+//                downTime = downTime,
+//                eventTime = eventTime,
+//                pointers = coords,
+//                metaState = 0,
+//            )
+//            if (!injectEvent(context, MotionEvent.ACTION_POINTER_UP, 0, rec, eventTime)) allOk = false
+//            remaining.removeAt(0)
+//            eventTime += 1
+//        }
+//        // 最后一指 ACTION_UP（off-screen）
+//        val last = remaining.first()
+//        val lastRec = MotionEventRecord(
+//            actionMasked = MotionEvent.ACTION_UP,
+//            actionIndex = 0,
+//            downTime = downTime,
+//            eventTime = eventTime,
+//            pointers = listOf(PointerCoords(last.id, offX, offY)),
+//            metaState = 0,
+//        )
+//        if (!injectEvent(context, MotionEvent.ACTION_UP, 0, lastRec, eventTime)) allOk = false
+//        return allOk
+//    }
 
     /** 按记录顺序重放全部事件。 */
     fun replayAll(context: Context): Boolean {

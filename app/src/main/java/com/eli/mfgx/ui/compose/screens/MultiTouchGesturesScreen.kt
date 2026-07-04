@@ -405,6 +405,7 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
         },
     )
 
+    /* —— 已注释：注入顺序开关（pilferPointers 方案下不再需要注入顺序）——
     // Inject order toggle
     var liftBeforeCancel by remember {
         mutableStateOf(
@@ -443,6 +444,7 @@ private fun ThresholdSettings(context: Context, prefs: android.content.SharedPre
             )
         }
     }
+    */
 }
 
 // 屏幕物理尺寸（宽 × 高 px），用于阈值标定参考

@@ -11,7 +11,8 @@ import android.view.MotionEvent
  *
  * - waitingTimeout 使用 Handler 计时器：自 ACTION_DOWN 起 arm，到点若仍 WAITING → INACTIVE；进入 ACTIVE 取消该计时器。
  * - WAITING → ACTIVE（POINTER_DOWN 使手指数达 min 阈值）：取消 waitingTimeout 计时器；
- *   根据 [Callbacks.liftBeforeCancel] 决定先注入 off-screen 抬起序列还是先注入 ACTION_CANCEL。
+ *   调用 [Callbacks.pilferPointers]：经 InputMonitor.pilferPointers() 让 dispatcher 原生向 App 发送
+ *   ACTION_CANCEL 取消进行中的触摸（替代旧的手搓 cancel+up 注入）。
  * - ACTIVE：劫持并丢弃所有事件（仅内部追踪指针位置用于识别），直至 POINTER_UP / ACTION_UP 运行手势识别。
  *   识别有效且已配置 → 派发动作；无论识别结果如何一律进入 BLOCKING。不再录制、不再重放。
  * - BLOCKING：劫持并抛弃除 ACTION_UP（收尾 → INACTIVE）与 ACTION_DOWN（开启新序列）外的所有事件。
@@ -36,8 +37,10 @@ internal class MultiTouchGestureDetector(
         fun largeThreshold(): Int
         fun waitingTimeoutMs(): Int
         fun speedThreshold(): Float
-        /** true = 先 injectLiftOffscreen 再 injectCancel；false = 先取消再抬起 */
-        fun liftBeforeCancel(): Boolean
+        /** WAITING→ACTIVE 时调用：通过 InputMonitor.pilferPointers() 让 dispatcher 原生向 App 发送 ACTION_CANCEL。 */
+        fun pilferPointers()
+//        /** true = 先 injectLiftOffscreen 再 injectCancel；false = 先取消再抬起 */
+//        fun liftBeforeCancel(): Boolean
         fun log(message: String)
     }
 
@@ -240,34 +243,45 @@ internal class MultiTouchGestureDetector(
     /**
      * WAITING → ACTIVE 转换：
      * 1) 取消 waitingTimeout 计时器；
-     * 2) 根据 [Callbacks.liftBeforeCancel] 决定注入顺序：
-     *    - true：先 injectLiftOffscreen（POINTER_UP ×N−1 + UP ×1）再 injectCancel
-     *    - false：先 injectCancel 再 injectLiftOffscreen
-     * 均使用序列 downTime 与各指针当前位置；off-screen 坐标取屏幕右下角之外。
+     * 2) 调用 [Callbacks.pilferPointers]：通过 InputMonitor.pilferPointers() 让 dispatcher 原生
+     *    向 App 发送 ACTION_CANCEL 取消进行中的触摸（替代手搓的 cancel+up 注入）。
+     *
+     * —— 旧实现（已注释，保留以便对比）——
+     * 根据 [Callbacks.liftBeforeCancel] 决定注入顺序，手搓 injectCancel + injectLiftOffscreen：
+     *   - liftBeforeCancel=true：先 injectLiftOffscreen（POINTER_UP ×N−1 + UP ×1）再 injectCancel
+     *   - liftBeforeCancel=false：先 injectCancel 再 injectLiftOffscreen
+     * off-screen 坐标取屏幕右下角之外。
      */
     private fun enterActive(context: Context, eventTime: Long) {
-        val coords: List<EventReplayHandoff.PointerCoords>
-        val dt: Long
         synchronized(stateLock) {
             state = State.ACTIVE
-            dt = downTime
-            coords = pointers.values.map {
-                EventReplayHandoff.PointerCoords(it.pointerId, it.currentX, it.currentY)
-            }
         }
         cancelWaitingTimeout()
-        val dm = context.resources.displayMetrics
-        val offX = dm.widthPixels + 1f
-        val offY = dm.heightPixels + 1f
-        if (callbacks.liftBeforeCancel()) {
-            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
-            handoff.injectCancel(context, dt, eventTime, coords)
-            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected off-screen lift + CANCEL")
-        } else {
-            handoff.injectCancel(context, dt, eventTime, coords)
-            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
-            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected CANCEL + off-screen lift")
-        }
+        callbacks.pilferPointers()
+        callbacks.log("Entered ACTIVE, pilfered pointers (dispatcher-native CANCEL)")
+
+//        val coords: List<EventReplayHandoff.PointerCoords>
+//        val dt: Long
+//        synchronized(stateLock) {
+//            state = State.ACTIVE
+//            dt = downTime
+//            coords = pointers.values.map {
+//                EventReplayHandoff.PointerCoords(it.pointerId, it.currentX, it.currentY)
+//            }
+//        }
+//        cancelWaitingTimeout()
+//        val dm = context.resources.displayMetrics
+//        val offX = dm.widthPixels + 1f
+//        val offY = dm.heightPixels + 1f
+//        if (callbacks.liftBeforeCancel()) {
+//            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
+//            handoff.injectCancel(context, dt, eventTime, coords)
+//            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected off-screen lift + CANCEL")
+//        } else {
+//            handoff.injectCancel(context, dt, eventTime, coords)
+//            handoff.injectLiftOffscreen(context, dt, eventTime, coords, offX, offY)
+//            callbacks.log("Entered ACTIVE (${coords.size} fingers), injected CANCEL + off-screen lift")
+//        }
     }
 
     /**

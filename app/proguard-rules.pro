@@ -7,6 +7,13 @@
 # Keep all hook/overlay/ui classes (referenced via reflection by Xposed)
 -keep class com.eli.mfgx.** { *; }
 
+# Compile-time @hide stubs (android.view.InputEventReceiver / InputChannel).
+# At runtime the real framework classes on system_server's boot classpath shadow
+# these via parent-first classloading; the keeps just prevent R8 from renaming the
+# stub symbols referenced by our InputEventReceiver subclass.
+-keep class android.view.InputEventReceiver { *; }
+-keep class android.view.InputChannel { *; }
+
 # Xposed API
 -keep class de.robv.android.xposed.** { *; }
 -dontwarn de.robv.android.xposed.**
