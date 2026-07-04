@@ -98,6 +98,7 @@
     <string name="donate_alipay_scan">打开支付宝扫一扫捐赠</string>
     <string name="donate_wechat_scan">打开微信扫一扫捐赠</string>
     <string name="donate_edgex_author">打赏EdgeX作者</string>
+    <string name="donate_modified_from_edgex">本项目修改自EdgeX</string>
     <string name="donate_edgex_title">打赏EdgeX原作者</string>
     <string name="donate_edgex_subtitle">EdgeX项目的原作者</string>
     <string name="donate_edgex_alipay_scan">打开支付宝扫一扫捐赠</string>
@@ -498,7 +499,7 @@
     <string name="compose_more">更多</string>
     <string name="compose_info">信息</string>
     <string name="compose_edit">编辑</string>
-    <string name="compose_app_subtitle">边缘手势 · 智能交互</string>
+    <string name="compose_app_subtitle">全局手势</string>
     <string name="compose_route_home">主页</string>
     <string name="compose_module_active">模块已激活</string>
     <string name="compose_module_inactive">未激活</string>

@@ -105,10 +105,22 @@ object DonateDialog {
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).also { it.bottomMargin = dp(4f) })
 
+        // Note: this project is modified from EdgeX
+        TextView(context).apply {
+            text = context.getString(R.string.donate_modified_from_edgex)
+            textSize = 9f
+            setTextColor("#666666".toColorInt())
+            gravity = Gravity.CENTER
+            root.addView(this, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dp(12f) })
+        }
+
         // EdgeX author link
         val edgexAuthorLink = TextView(context).apply {
             text = context.getString(R.string.donate_edgex_author)
-            textSize = 12f
+            textSize = 9f
             setTextColor("#1677FF".toColorInt())
             gravity = Gravity.CENTER
             isClickable = true
@@ -117,7 +129,7 @@ object DonateDialog {
             root.addView(this, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = dp(12f) })
+            ).also { it.topMargin = dp(4f) })
         }
 
         val shape = GradientDrawable().apply {
