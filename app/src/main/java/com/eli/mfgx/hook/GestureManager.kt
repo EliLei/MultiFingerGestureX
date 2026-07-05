@@ -8,10 +8,15 @@ import android.content.IntentFilter
 import android.hardware.input.InputManager
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Display
 import android.view.InputChannel
+import android.view.InputDevice
 import android.view.InputEvent
 import android.view.InputEventReceiver
+import android.view.MotionEvent
+import android.view.MotionEvent.PointerCoords
+import android.view.MotionEvent.PointerProperties
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.HookConfigSnapshot
 import com.eli.mfgx.config.ModuleActivationState
@@ -46,16 +51,9 @@ object GestureManager {
         )
     }
 
-    private val recentsDriver by lazy {
-        RecentsAnimationDriver(
-            handlerProvider = ::mainHandler,
-            contextProvider = { systemContext },
-            performHome = { ctx -> GlobalActionHelper.performGlobalAction(ctx, GlobalActionHelper.GLOBAL_ACTION_HOME) },
-            performRecents = { ctx -> GlobalActionHelper.performGlobalAction(ctx, GlobalActionHelper.GLOBAL_ACTION_RECENTS) },
-            switchApp = { forward, ctx -> actionDispatcher.triggerSwitchApp(ctx, forward) },
-            log = { msg -> log("[Recents] $msg") },
-        )
-    }
+    // Virtual touch injection state for SWIPE_UP → bottom-edge swipe mapping
+    private var virtualStartY: Float = 0f
+    private var virtualDownTime: Long = 0L
 
     private fun onGestureTimeout() { gestureDetector.onTimeout() }
 
@@ -73,14 +71,32 @@ object GestureManager {
                 override fun performScreenshot() {
                     systemContext?.let { mainHandler().post { actionDispatcher.triggerScreenshot(it) } }
                 }
-                override fun startRecents() {
-                    systemContext?.let { mainHandler().post { recentsDriver.start(it) } }
+                override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float) {
+                    mainHandler().post {
+                        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
+                        virtualStartY = startY
+                        virtualDownTime = SystemClock.uptimeMillis()
+                        // Virtual DOWN at (startX, bottom edge)
+                        injectVirtualMotionEvent(MotionEvent.ACTION_DOWN, startX, screenH - 1f, virtualDownTime, virtualDownTime)
+                        // Virtual MOVE at (currentX, screenH - 1 - startY + currentY)
+                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, screenH - 1f - startY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                    }
                 }
-                override fun driveRecents(progress: Float, centroidX: Float, centroidY: Float) {
-                    mainHandler().post { recentsDriver.drive(progress, centroidX, centroidY) }
+                override fun updateSwipeUpVirtual(currentX: Float, currentY: Float) {
+                    mainHandler().post {
+                        if (virtualDownTime == 0L) return@post
+                        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
+                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, screenH - 1f - virtualStartY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                    }
                 }
-                override fun finishRecents(action: GestureDecisions.SwipeUpAction) {
-                    systemContext?.let { mainHandler().post { recentsDriver.finish(action, it) } }
+                override fun finishSwipeUpVirtual(currentX: Float, currentY: Float) {
+                    mainHandler().post {
+                        if (virtualDownTime == 0L) return@post
+                        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
+                        injectVirtualMotionEvent(MotionEvent.ACTION_UP, currentX, screenH - 1f - virtualStartY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                        virtualDownTime = 0L
+                        virtualStartY = 0f
+                    }
                 }
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
@@ -99,6 +115,43 @@ object GestureManager {
 
     private fun log(message: String) {
         XposedBridge.log("$TAG: $message")
+    }
+
+    /**
+     * Inject a single-finger virtual MotionEvent at the bottom edge of the screen.
+     * Used to map multi-finger SWIPE_UP → single-finger bottom-edge swipe that the
+     * native OnePlus gesture system picks up natively.
+     */
+    private fun injectVirtualMotionEvent(
+        action: Int,
+        x: Float,
+        y: Float,
+        downTime: Long,
+        eventTime: Long,
+    ) {
+        val props = PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        }
+        val coords = PointerCoords().apply {
+            this.x = x
+            this.y = y
+            pressure = 1f
+            size = 1f
+        }
+        val event = MotionEvent.obtain(
+            downTime, eventTime, action,
+            1, arrayOf(props), arrayOf(coords),
+            0, 0, 1f, 1f,
+            0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0
+        )
+        try {
+            InputManager.getInstance().injectInputEvent(event, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+        } catch (t: Throwable) {
+            log("injectVirtualMotionEvent($action) failed: ${t.message}")
+        } finally {
+            event.recycle()
+        }
     }
 
     /**

@@ -27,9 +27,12 @@ internal class MultiTouchGestureDetector(
         fun screenHeight(): Int
         fun pilferPointers()
         fun performScreenshot()
-        fun startRecents()
-        fun driveRecents(progress: Float, centroidX: Float, centroidY: Float)
-        fun finishRecents(action: GestureDecisions.SwipeUpAction)
+        /** Inject virtual DOWN + initial MOVE at bottom edge to trigger native gesture system */
+        fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float)
+        /** Inject virtual MOVE to track finger movement */
+        fun updateSwipeUpVirtual(currentX: Float, currentY: Float)
+        /** Inject virtual UP to complete the gesture */
+        fun finishSwipeUpVirtual(currentX: Float, currentY: Float)
         fun log(message: String)
     }
 
@@ -58,9 +61,6 @@ internal class MultiTouchGestureDetector(
     private val pointers = LinkedHashMap<Int, PointerInfo>()
     private var state: State = State.INACTIVE
     private var newFingersAllowed: Boolean = true
-    private var swipeUpAnchorX: Float = 0f
-    private var swipeUpAnchorY: Float = 0f
-    private var swipeUpStartTimeMs: Long = 0L
 
     // ---- public ----
 
@@ -118,6 +118,8 @@ internal class MultiTouchGestureDetector(
 
     private fun handlePointerDown(e: PointerEvent): Boolean {
         if (state == State.INACTIVE) return false
+        // SWIPE_UP ignores all new pointers — gesture is already committed
+        if (state == State.SWIPE_UP) return true
         syncPointers(e, registerNew = true)
         if (state == State.WAITING) {
             if (pointers.size >= MIN_FINGERS) {
@@ -144,7 +146,7 @@ internal class MultiTouchGestureDetector(
                     timer.cancelTimeout()
                     when (t) {
                         GestureDecisions.ActiveTransition.SWIPE_DOWN -> state = State.SWIPE_DOWN
-                        GestureDecisions.ActiveTransition.SWIPE_UP -> enterSwipeUp(e.eventTime)
+                        GestureDecisions.ActiveTransition.SWIPE_UP -> enterSwipeUp()
                         GestureDecisions.ActiveTransition.MIXED_INACTIVE -> reset()
                     }
                 }
@@ -152,7 +154,8 @@ internal class MultiTouchGestureDetector(
             }
             State.SWIPE_UP -> {
                 syncPointers(e, registerNew = false)
-                driveSwipeUp()
+                val (cx, cy) = centroid()
+                callbacks.updateSwipeUpVirtual(cx, cy)
                 true
             }
             State.SWIPE_DOWN -> true // wait for release, consume silently
@@ -180,17 +183,9 @@ internal class MultiTouchGestureDetector(
                 return true
             }
             State.SWIPE_UP -> {
-                val (ax, ay) = centroid()
-                val dx = ax - swipeUpAnchorX
-                val dy = ay - swipeUpAnchorY
-                val durationMs = (e.eventTime - swipeUpStartTimeMs).coerceAtLeast(1L)
-                val upward = (-dy).coerceAtLeast(0f)
-                val velocity = if (durationMs > 0) upward / durationMs.toFloat() else 0f
-                val action = GestureDecisions.classifySwipeUpRelease(
-                    dx, dy, velocity, callbacks.smallThreshold().toFloat(), callbacks.speedThreshold()
-                )
-                callbacks.finishRecents(action)
-                callbacks.log("SWIPE_UP -> $action (dx=$dx dy=$dy v=$velocity)")
+                val (cx, cy) = centroid()
+                callbacks.finishSwipeUpVirtual(cx, cy)
+                callbacks.log("SWIPE_UP -> virtual UP injected")
                 reset()
                 return true
             }
@@ -206,21 +201,15 @@ internal class MultiTouchGestureDetector(
 
     // ---- helpers ----
 
-    private fun enterSwipeUp(eventTime: Long) {
+    private fun enterSwipeUp() {
         state = State.SWIPE_UP
-        val (ax, ay) = centroid()
-        swipeUpAnchorX = ax
-        swipeUpAnchorY = ay
-        swipeUpStartTimeMs = eventTime
-        callbacks.startRecents()
-        callbacks.log("-> SWIPE_UP, started recents animation")
-    }
-
-    private fun driveSwipeUp() {
-        val (ax, ay) = centroid()
-        val h = callbacks.screenHeight().toFloat()
-        val progress = ((swipeUpAnchorY - ay) / h).coerceIn(0f, 1f)
-        callbacks.driveRecents(progress, ax, ay)
+        val ps = pointers.values
+        val sX = ps.map { it.startX }.average().toFloat()
+        val sY = ps.map { it.startY }.average().toFloat()
+        val cX = ps.map { it.currentX }.average().toFloat()
+        val cY = ps.map { it.currentY }.average().toFloat()
+        callbacks.startSwipeUpVirtual(sX, sY, cX, cY)
+        callbacks.log("-> SWIPE_UP, virtual injection (sX=$sX sY=$sY cX=$cX cY=$cY)")
     }
 
     private fun centroid(): Pair<Float, Float> {

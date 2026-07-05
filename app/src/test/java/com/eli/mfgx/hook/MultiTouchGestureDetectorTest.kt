@@ -1,7 +1,6 @@
 package com.eli.mfgx.hook
 
 import android.view.MotionEvent
-import com.eli.mfgx.hook.GestureDecisions.SwipeUpAction
 import com.eli.mfgx.hook.MultiTouchGestureDetector.Callbacks
 import com.eli.mfgx.hook.MultiTouchGestureDetector.Pointer
 import com.eli.mfgx.hook.MultiTouchGestureDetector.PointerEvent
@@ -25,9 +24,11 @@ class MultiTouchGestureDetectorTest {
     private class FakeCallbacks : Callbacks {
         var pilfered = false
         var screenshotTaken = false
-        var recentsStarted = false
-        var lastProgress = -1f
-        var finishAction: SwipeUpAction? = null
+        var virtualStarted = false
+        var virtualUpdated = false
+        var virtualFinished = false
+        var lastStartX = 0f; var lastStartY = 0f
+        var lastCurrentX = 0f; var lastCurrentY = 0f
         override fun smallThreshold() = 12
         override fun screenshotThreshold() = 80
         override fun waitingTimeoutMs() = 300
@@ -35,9 +36,19 @@ class MultiTouchGestureDetectorTest {
         override fun screenHeight() = 2000
         override fun pilferPointers() { pilfered = true }
         override fun performScreenshot() { screenshotTaken = true }
-        override fun startRecents() { recentsStarted = true }
-        override fun driveRecents(progress: Float, centroidX: Float, centroidY: Float) { lastProgress = progress }
-        override fun finishRecents(action: SwipeUpAction) { finishAction = action }
+        override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float) {
+            virtualStarted = true
+            lastStartX = startX; lastStartY = startY
+            lastCurrentX = currentX; lastCurrentY = currentY
+        }
+        override fun updateSwipeUpVirtual(currentX: Float, currentY: Float) {
+            virtualUpdated = true
+            lastCurrentX = currentX; lastCurrentY = currentY
+        }
+        override fun finishSwipeUpVirtual(currentX: Float, currentY: Float) {
+            virtualFinished = true
+            lastCurrentX = currentX; lastCurrentY = currentY
+        }
         override fun log(message: String) {}
     }
 
@@ -95,14 +106,19 @@ class MultiTouchGestureDetectorTest {
         assertTrue(timer.cancelled)
     }
 
-    @Test fun activeAllUpEntersSwipeUpAndStartsRecents() {
+    @Test fun activeAllUpEntersSwipeUpAndStartsVirtual() {
         d.handlePointerEvent(down(ptr(0, 100f, 500f)))
         d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 1))
         d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
         d.handlePointerEvent(move(
             ptr(0, 100f, 440f), ptr(1, 200f, 440f), ptr(2, 300f, 440f))) // each moved up 60px
         assertEquals(State.SWIPE_UP, d.currentState())
-        assertTrue(cb.recentsStarted)
+        assertTrue(cb.virtualStarted)
+        // start centroid: (200, 500), current centroid: (200, 440)
+        assertEquals(200f, cb.lastStartX)
+        assertEquals(500f, cb.lastStartY)
+        assertEquals(200f, cb.lastCurrentX)
+        assertEquals(440f, cb.lastCurrentY)
     }
 
     @Test fun activeMixedGoesInactive() {
@@ -133,17 +149,19 @@ class MultiTouchGestureDetectorTest {
         assertFalse(cb.screenshotTaken)
     }
 
-    @Test fun swipeUpReleaseDispatchesFinishAction() {
+    @Test fun swipeUpReleaseInjectsVirtualUp() {
         d.handlePointerEvent(down(ptr(0, 100f, 1000f)))
         d.handlePointerEvent(pDown(ptr(0, 100f, 1000f), ptr(1, 200f, 1000f), idx = 1))
         d.handlePointerEvent(pDown(ptr(0, 100f, 1000f), ptr(1, 200f, 1000f), ptr(2, 300f, 1000f), idx = 2))
-        // MOVE up 60px at t=100 → enters SWIPE_UP
+        // MOVE up 60px → enters SWIPE_UP
         d.handlePointerEvent(ev(MotionEvent.ACTION_MOVE,
             listOf(ptr(0, 100f, 940f), ptr(1, 200f, 940f), ptr(2, 300f, 940f)), idx = 0, t = 100L))
-        // release at t=200, centroid moved from 940→700 (up 240), velocity = 240/100 = 2.4 ≥ 1.5 → HOME
+        // release: injects virtual UP with current centroid
         d.handlePointerEvent(ev(MotionEvent.ACTION_POINTER_UP,
             listOf(ptr(0, 100f, 700f), ptr(1, 200f, 700f), ptr(2, 300f, 700f)), idx = 0, t = 200L))
-        assertEquals(SwipeUpAction.HOME, cb.finishAction)
+        assertTrue(cb.virtualFinished)
+        assertEquals(200f, cb.lastCurrentX)
+        assertEquals(700f, cb.lastCurrentY)
         assertEquals(State.INACTIVE, d.currentState())
     }
 

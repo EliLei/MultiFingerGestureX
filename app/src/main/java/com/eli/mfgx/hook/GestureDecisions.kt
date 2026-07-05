@@ -12,7 +12,6 @@ import kotlin.math.sqrt
  */
 internal object GestureDecisions {
 
-    enum class SwipeUpAction { HOME, RECENTS, SWITCH_PREV, SWITCH_NEXT, NO_OP }
     enum class ActiveTransition { SWIPE_DOWN, SWIPE_UP, MIXED_INACTIVE }
 
     data class PointerVec(val id: Int, val dx: Float, val dy: Float)
@@ -50,28 +49,6 @@ internal object GestureDecisions {
     fun shouldScreenshot(pointers: List<PointerVec>, smallThreshold: Float, screenshotThreshold: Float): Boolean {
         if (pointers.isEmpty()) return false
         return pointers.all { it.dy > smallThreshold } && pointers.any { it.dy > screenshotThreshold }
-    }
-
-    /**
-     * SWIPE_UP release classification from centroid total displacement + upward velocity.
-     * [dy] < 0 = upward; [upwardVelocity] ≥ 0 = upward speed in px/ms.
-     */
-    fun classifySwipeUpRelease(
-        dx: Float,
-        dy: Float,
-        upwardVelocity: Float,
-        smallThreshold: Float,
-        speedThreshold: Float,
-    ): SwipeUpAction {
-        // horizontal first: |dx| dominates and exceeds small → switch app (right=next, left=prev)
-        if (abs(dx) > abs(dy) && abs(dx) > smallThreshold) {
-            return if (dx > 0f) SwipeUpAction.SWITCH_NEXT else SwipeUpAction.SWITCH_PREV
-        }
-        // upward and exceeds small: fast → Home, slow → Recents
-        if (dy < -smallThreshold) {
-            return if (upwardVelocity >= speedThreshold) SwipeUpAction.HOME else SwipeUpAction.RECENTS
-        }
-        return SwipeUpAction.NO_OP
     }
 
     private fun len(dx: Float, dy: Float): Float = sqrt(dx * dx + dy * dy)
