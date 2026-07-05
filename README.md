@@ -52,20 +52,6 @@ All settings are in the **Thresholds** screen:
 | Quick Swipe Speed | 1.5 px/ms | (Reserved) |
 | Swipe-Up Y Offset | 0 px | Fine-tune the virtual touch position for SWIPE_UP |
 
-## Architecture
-
-```
-Touch Event
-    ↓
-InputManagerService.filterInputEvent (Xposed hook)
-    ↓
-MultiTouchGestureDetector (state machine: INACTIVE → WAITING → ACTIVE → SWIPE_DOWN / SWIPE_UP)
-    ↓
-    ├─ SWIPE_DOWN → Screenshot (GlobalActionHelper)
-    └─ SWIPE_UP   → Virtual bottom-edge touch injection
-                    → Native gesture system handles animation + action
-```
-
 ## Tested On
 
 | Device | Android | Xposed |

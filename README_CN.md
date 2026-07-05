@@ -52,20 +52,6 @@
 | 快速滑动速度 | 1.5 px/ms | （预留） |
 | 上滑 Y 偏移 | 0 px | 微调上滑手势的虚拟触摸位置 |
 
-## 架构
-
-```
-触摸事件
-    ↓
-InputManagerService.filterInputEvent（Xposed Hook）
-    ↓
-MultiTouchGestureDetector（状态机：INACTIVE → WAITING → ACTIVE → SWIPE_DOWN / SWIPE_UP）
-    ↓
-    ├─ SWIPE_DOWN → 截屏（GlobalActionHelper）
-    └─ SWIPE_UP   → 屏幕底部虚拟触摸注入
-                    → 原生手势系统处理动画 + 动作
-```
-
 ## 已验证设备
 
 | 设备 | Android | Xposed |
