@@ -33,6 +33,7 @@ scripts
 # Premium plugin source and build tools — not distributed in this repo
 /premium/
 /tools/
+.codebase-memory
 
 # Local Netlify folder
 .netlify
