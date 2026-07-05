@@ -57,4 +57,7 @@ object AppConfig {
     const val GESTURE_SPEED_THRESHOLD = "gesture_speed_threshold"
     const val GESTURE_WAITING_TIMEOUT_MS_DEFAULT = 300
     val GESTURE_SPEED_THRESHOLD_DEFAULT = 1.5f
+
+    const val GESTURE_SWIPE_UP_OFFSET_Y = "gesture_swipe_up_offset_y"
+    const val GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT = 0
 }

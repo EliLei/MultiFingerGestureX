@@ -78,22 +78,25 @@ object GestureManager {
                         virtualDownTime = SystemClock.uptimeMillis()
                         // Virtual DOWN at (startX, bottom edge)
                         injectVirtualMotionEvent(MotionEvent.ACTION_DOWN, startX, screenH - 1f, virtualDownTime, virtualDownTime)
-                        // Virtual MOVE at (currentX, screenH - 1 - startY + currentY)
-                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, screenH - 1f - startY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                        // Virtual MOVE at (currentX, screenH - 1 - startY + currentY + offsetY)
+                        val vY = screenH - 1f - startY + currentY + swipeUpOffsetY()
+                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
                     }
                 }
                 override fun updateSwipeUpVirtual(currentX: Float, currentY: Float) {
                     mainHandler().post {
                         if (virtualDownTime == 0L) return@post
                         val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
-                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, screenH - 1f - virtualStartY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                        val vY = screenH - 1f - virtualStartY + currentY + swipeUpOffsetY()
+                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
                     }
                 }
                 override fun finishSwipeUpVirtual(currentX: Float, currentY: Float) {
                     mainHandler().post {
                         if (virtualDownTime == 0L) return@post
                         val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
-                        injectVirtualMotionEvent(MotionEvent.ACTION_UP, currentX, screenH - 1f - virtualStartY + currentY, virtualDownTime, SystemClock.uptimeMillis())
+                        val vY = screenH - 1f - virtualStartY + currentY + swipeUpOffsetY()
+                        injectVirtualMotionEvent(MotionEvent.ACTION_UP, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
                         virtualDownTime = 0L
                         virtualStartY = 0f
                     }
@@ -109,6 +112,10 @@ object GestureManager {
 
     private fun readFloat(key: String, default: Float): Float =
         configRepository.get(key, default.toString()).toFloatOrNull() ?: default
+
+    /** SWIPE_UP virtual Y offset in pixels. Positive = push gesture downward, negative = pull upward. */
+    private fun swipeUpOffsetY(): Float =
+        readInt(AppConfig.GESTURE_SWIPE_UP_OFFSET_Y, AppConfig.GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT).toFloat()
 
     private fun mainHandler(): Handler =
         mHandler ?: Handler(Looper.getMainLooper()).also { mHandler = it }

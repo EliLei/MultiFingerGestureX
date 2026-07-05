@@ -67,6 +67,12 @@ fun ThresholdsScreen(onBack: () -> Unit) {
                 AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString(),
                 R.string.label_speed_threshold, "px/ms", isDecimal = true
             )
+            ThresholdRow(
+                context, prefs,
+                AppConfig.GESTURE_SWIPE_UP_OFFSET_Y,
+                AppConfig.GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT.toString(),
+                R.string.label_swipe_up_offset_y, "px", isDecimal = false
+            )
         }
         Spacer(modifier = Modifier.height(28.dp))
     }
