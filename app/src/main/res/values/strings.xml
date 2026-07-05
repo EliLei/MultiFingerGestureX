@@ -152,6 +152,7 @@
     <!-- Threshold Labels -->
     <string name="label_small_threshold">Small Threshold</string>
     <string name="label_large_threshold">Large Threshold</string>
+    <string name="label_screenshot_threshold">Screenshot Threshold</string>
     <string name="label_waiting_timeout">Waiting Timeout</string>
     <string name="label_speed_threshold">Quick Swipe Speed</string>
     <string name="hint_screen_size">Screen size: %1$s</string>
@@ -505,6 +506,9 @@
     <string name="compose_edit">Edit</string>
     <string name="compose_app_subtitle">Global Gestures</string>
     <string name="compose_route_home">Home</string>
+    <string name="compose_route_thresholds">Thresholds</string>
+    <string name="compose_master_toggle">Multi-Finger Gestures</string>
+    <string name="compose_master_toggle_desc">Swipe down to screenshot · swipe up to navigate</string>
     <string name="compose_module_active">Module Active</string>
     <string name="compose_module_inactive">Not Activated</string>
     <string name="compose_home_hero_title">Multi-Finger\nGesture Control</string>
