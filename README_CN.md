@@ -70,7 +70,7 @@ MultiTouchGestureDetector（状态机：INACTIVE → WAITING → ACTIVE → SWIP
 
 | 设备 | Android | Xposed |
 |------|---------|--------|
-| OnePlus (ColorOS) | 15 | LSPosed |
+| OnePlus (ColorOS) | 16 | LSPosed |
 | Pixel 9 | 16 | LSPosed 1.9.2 |
 | AVD | 16 | Vector 2.0 |
 

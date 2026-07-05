@@ -70,9 +70,7 @@ MultiTouchGestureDetector (state machine: INACTIVE → WAITING → ACTIVE → SW
 
 | Device | Android | Xposed |
 |--------|---------|--------|
-| OnePlus (ColorOS) | 15 | LSPosed |
-| Pixel 9 | 16 | LSPosed 1.9.2 |
-| AVD | 16 | Vector 2.0 |
+| OnePlus (ColorOS) | 16 | LSPosed |
 
 ## Credits
 
