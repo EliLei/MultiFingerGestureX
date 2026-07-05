@@ -1,7 +1,9 @@
 package com.eli.mfgx.hook
 
 import android.content.Context
+import android.os.Binder
 import android.os.Handler
+import android.os.IInterface
 import android.view.SurfaceControl
 import de.robv.android.xposed.XposedHelpers
 
@@ -31,6 +33,7 @@ internal class RecentsAnimationDriver(
     @Volatile private var appStartY = 0f
     @Volatile private var screenHeight = 0
     @Volatile private var animationStarted = false
+    private val runnerBinder: Binder = Binder()
 
     private val runnerProxy: Any by lazy { createRunnerProxy() }
 
@@ -104,21 +107,33 @@ internal class RecentsAnimationDriver(
 
     // ---- reflection helpers ----
 
-    /** Dynamic proxy implementing IRecentsAnimationRunner (method-name switch tolerates version drift). */
+    /** IRecentsAnimationRunner implementation via Proxy + Binder.attachInterface (same-process callbacks). */
     private fun createRunnerProxy(): Any {
-        val runnerCls = Class.forName("android.view.IRecentsAnimationRunner")
-        return java.lang.reflect.Proxy.newProxyInstance(
-            runnerCls.classLoader, arrayOf(runnerCls)
+        val runnerIface = Class.forName("android.view.IRecentsAnimationRunner")
+        val stubClass = Class.forName("android.view.IRecentsAnimationRunner\$Stub")
+        val descriptor = XposedHelpers.getStaticObjectField(stubClass, "DESCRIPTOR") as String
+
+        val proxy = java.lang.reflect.Proxy.newProxyInstance(
+            runnerIface.classLoader, arrayOf(runnerIface)
         ) { _, method, args ->
             when (method?.name) {
                 "onAnimationStart" -> onAnimationStart(args)
                 "onAnimationCanceled" -> { controller = null; appLeash = null; null }
                 "onTaskAppeared" -> null
-                "asBinder" -> android.os.Binder()
+                "asBinder" -> runnerBinder
                 else -> null
             }
         }
+
+        // Attach proxy to Binder so same-process dispatch works (we're in system_server
+        // alongside ActivityTaskManagerService — callbacks are local, not remote IPC).
+        runnerBinder.attachInterface(proxy as IInterface, descriptor)
+
+        return proxy
     }
+
+
+
 
     /** Captured from onAnimationStart callback (binder thread → post to main). */
     private fun onAnimationStart(args: Array<Any?>?) {
