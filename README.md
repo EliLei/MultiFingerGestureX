@@ -26,16 +26,6 @@ Put three or more fingers on the screen and swipe:
 | Swipe Up | Home (fast) / Recents (slow) |
 | Swipe Left / Right | Switch to previous / next app |
 
-## How It Works
-
-The module runs inside `system_server` via LSPosed/Xposed. It hooks `InputManagerService.filterInputEvent` to intercept touch events before they reach apps.
-
-- **Gesture detection**: A state machine tracks all pointers. When 3+ fingers all move in a consistent direction, the gesture is recognized. `InputMonitor.pilferPointers()` cancels the touch stream so the foreground app never sees it.
-
-- **Swipe Down**: Triggers `GlobalActionHelper.performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)` with a configurable distance threshold.
-
-- **Swipe Up**: On devices with a system gesture bar (e.g. OnePlus ColorOS), the module injects a virtual single-finger touch at the bottom edge of the screen via `InputManager.injectInputEvent()`. The native gesture system picks it up and handles the animation and action decision (Home vs Recents vs app switch) exactly as if you swiped from the gesture bar.
-
 ## Requirements
 
 - Android 15 or later.

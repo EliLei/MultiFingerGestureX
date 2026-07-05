@@ -26,16 +26,6 @@
 | 上滑 | 快速 → 回桌面 / 慢速 → 最近任务 |
 | 左滑 / 右滑 | 切换上一个 / 下一个应用 |
 
-## 原理
-
-模块通过 LSPosed/Xposed 运行在 `system_server` 进程中，Hook `InputManagerService.filterInputEvent` 在触摸事件到达 App 之前进行拦截。
-
-- **手势检测**：状态机跟踪所有手指。当 3 指以上朝同一方向移动超过阈值后，判定手势方向。同时通过 `InputMonitor.pilferPointers()` 取消 App 的触摸流，App 不会收到这些触摸事件。
-
-- **下滑**：调用 `GlobalActionHelper.performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)` 触发截屏，滑动距离不足阈值时不触发。
-
-- **上滑**：在具有系统手势条（如 OnePlus ColorOS）的设备上，模块通过 `InputManager.injectInputEvent()` 在屏幕底部边缘注入一个虚拟单指触摸。原生手势系统接收到后，会像用户从手势条上滑一样处理动画和动作判定（快速上滑回桌面、慢速上滑进最近任务、横向滑动切换应用）。
-
 ## 环境要求
 
 - Android 15 及以上。
