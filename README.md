@@ -1,6 +1,6 @@
 # MultiFingerGestureX
 
-> A multi-touch gesture module for Android 15+ based on LSPosed/Xposed. Intercept 3/4/5-finger swipe and pinch gestures to trigger configurable system actions.
+> An LSPosed/Xposed multi-touch gesture module for Android 15+. Intercept 3/4/5-finger swipe and pinch gestures to trigger configurable system actions.
 
 <p align="center">
   <img src="docs/icon/logo.png" alt="MFGX Logo" width="220" />
@@ -18,63 +18,101 @@
 
 ## Overview
 
-MultiFingerGestureX is not a regular floating-window utility. The app process is only the configuration surface; the module logic runs entirely inside the `system_server` process injected by LSPosed/Xposed:
+MultiFingerGestureX is an LSPosed/Xposed module that hooks into Android's input pipeline at the framework level. The app process is a configuration surface; the actual gesture recognition and action dispatch run inside `system_server`:
 
-- `android` (system_server): multi-touch gesture detection, event interception and replay, action dispatch.
-- `com.eli.mfgx`: settings UI and cross-process configuration storage.
-
-It is intended for rooted LSPosed users who want to trigger actions with multi-finger gestures: Back, Home, Recents, screenshots, app launch, app shortcuts, shell commands, pie menu, custom panels, side bars, and more.
+- **`android` (system_server)**: `InputManagerService.filterInputEvent` hook → multi-touch state machine → native `InputMonitor.pilferPointers()` touch cancellation → action dispatch or virtual touch injection.
+- **`com.eli.mfgx`**: Compose-based settings UI, cross-process configuration via `SharedPreferences` + `BroadcastReceiver`.
 
 ## Features
 
-- **Multi-touch gestures**: 3, 4, and 5-finger gestures with 8 gesture types per finger count.
-- **Gesture types**: Swipe Up, Swipe Down, Swipe Left, Swipe Right, Pinch In, Pinch Out, Quick Swipe Up, Quick Swipe Down.
-- **Per-gesture enable/disable**: Each finger count × gesture type combination can be independently enabled.
-- **Per-gesture action binding**: Each enabled gesture binds to a configurable action.
-- **System actions**: Back, Home, Recents, notifications, lock screen, screenshot, volume, brightness, and more.
-- **Apps and shortcuts**: Launch selected apps or app shortcuts.
-- **Pie and custom panels**: Open radial Pie menus or custom panels from gestures.
-- **Action workflows**: Save multiple-action combinations and run conditional actions.
-- **Shell commands**: Bind custom commands with optional `su` execution.
-- **Theming**: Configurable accent colors and dark mode.
+### Gesture Recognition
+- **3, 4, and 5-finger** gestures with independent enable/disable per combination.
+- **8 gesture types per finger count**: Swipe Up, Swipe Down, Swipe Left, Swipe Right, Pinch In, Pinch Out, Quick Swipe Up, Quick Swipe Down.
+- **State-machine based detection**: `INACTIVE → WAITING → ACTIVE → SWIPE_DOWN / SWIPE_UP → INACTIVE`, with configurable thresholds and timeout.
+- **Native touch cancellation**: Uses `InputManager.monitorGestureInput` + `pilferPointers()` to cancel the app's touch stream when a gesture is recognized — no hand-crafted cancel-event injection.
+
+### SWIPE_UP — Native Gesture Delegation
+On devices with a system gesture bar (e.g. OnePlus), SWIPE_UP maps the multi-finger swipe to a **single-finger virtual touch at the bottom edge** of the screen via `InputManager.injectInputEvent()`. The native gesture system picks it up and handles all animation and action decisions (Home / Recents / app switch) natively. Configurable Y offset is available for tuning.
+
+### SWIPE_DOWN — Screenshot
+SWIPE_DOWN triggers screenshot with configurable distance thresholds. Meets or exceeds the threshold → screenshot; below → no-op.
+
+### Actions
+Each gesture can bind to any of:
+- **System actions**: Back, Home, Recents, Notifications, Quick Settings, Lock Screen, Power Dialog, Screenshot, Partial Screenshot.
+- **App launch**: Pick any installed app or app shortcut.
+- **Pie Menu**: Radial action menu from screen edges (left/right/top/bottom), 2 rings × 6 slots each, configurable size and color.
+- **Custom Panel**: 4×4 action grid overlay.
+- **Side Bar**: 7-slot vertical action bar from left or right edge.
+- **Shell Commands**: Execute custom commands with optional `su` (root) execution.
+- **Action Workflows**: Multi-step action sequences with conditional execution.
+- **Media Control**: Play/pause, next/previous track.
+- **Volume & Brightness**: Adjust system volume or screen brightness.
+
+### UI
+- **Jetpack Compose** settings interface with accent color theming and dark mode.
+- **Configurable thresholds**: Small threshold, screenshot threshold, waiting timeout, speed threshold, SWIPE_UP Y offset — all adjustable from the UI.
+
+## Architecture
+
+```
+Touch Event
+    ↓
+InputManagerService.filterInputEvent (Xposed hook)
+    ↓
+GestureManager.handleMotionEvent()
+    ↓
+MultiTouchGestureDetector (state machine)
+    ↓
+    ├─ SWIPE_DOWN → GestureActionDispatcher.triggerScreenshot()
+    ├─ SWIPE_UP  → Virtual touch injection (InputManager.injectInputEvent)
+    │              → Native gesture system handles animation + action
+    └─ Other     → GestureActionDispatcher → System action / App / Shell / Pie / Panel
+```
+
+Key technical details:
+- `InputMonitor.monitorGestureInput("mfgx-gesture")` creates a gesture monitor channel.
+- `pilferPointers()` is called asynchronously (posted to main handler to avoid dispatcher reentrancy).
+- A drain `InputEventReceiver` consumes the monitor channel to prevent buffer overflow.
+- Config is stored in `SharedPreferences` and synced to `system_server` via `BroadcastReceiver`.
 
 ## Requirements
 
-- Android 15 or later.
-- LSPosed / Xposed environment with Xposed API 82 or later.
-- Current build config: `minSdk 35`, `targetSdk 36`, `compileSdk 36`.
-- Required LSPosed scope:
-  - `android` / System Framework (system_server)
+- Android 15 or later (`minSdk 35`, `targetSdk 36`, `compileSdk 36`).
+- LSPosed / Xposed environment (Xposed API 82+).
+- Required LSPosed scope: **`android`** (System Framework).
+- Root access for LSPosed itself.
 
 ## Installation
 
 1. Install the MultiFingerGestureX APK.
-2. Enable MultiFingerGestureX in LSPosed.
-3. Select the `android` (System Framework) scope.
+2. Enable the module in LSPosed.
+3. Select the **`android`** (System Framework) scope.
 4. Reboot the device. A full reboot is recommended after first activation or scope changes.
-5. Open MultiFingerGestureX, enable gestures, and assign actions per finger count and gesture type.
+5. Open the app, enable gestures, and assign actions per finger count and gesture type.
 
 ## Usage Tips
 
-- If gestures do not trigger, check the LSPosed scopes, module enablement, and whether the device was rebooted after enabling the module.
-- Use the in-app SystemUI restart entry after changing hook-side behavior.
+- If gestures don't trigger: verify LSPosed scope includes `android`, the module is enabled, and the device was rebooted.
+- Use the in-app "Restart SystemUI" option after changing hook-side behavior.
+- For SWIPE_UP tuning: adjust the Y offset in Thresholds settings to match your device's gesture bar sensitivity.
 
 ## Tested Environment
 
 | Device                 | Android | Xposed Environment                                             | Root Solution                                 |
 |------------------------|---------|----------------------------------------------------------------|-----------------------------------------------|
+| OnePlus (ColorOS)      | 15      | LSPosed                                                        | —                                              |
 | Pixel 9                | 16      | [`LSPosed 1.9.2-it(7455)`](https://github.com/LSPosed/Lsposed) | [KernelSU](https://github.com/tiann/KernelSU) |
 | Android Virtual Device | 16      | [`Vector 2.0(3021)`](https://github.com/JingMatrix/Vector)     | [Magisk](https://github.com/topjohnwu/Magisk) |
 
 ## Reporting Issues
 
-Useful issue details:
-
-- Device model, Android version, and ROM.
+Please include:
+- Device model, Android version, and ROM (e.g. OnePlus 12, ColorOS 15).
 - LSPosed / Xposed version.
 - Enabled scopes.
-- Trigger path, for example `4-finger Swipe Up`.
-- Xposed logs and reproduction steps.
+- Trigger path (e.g. "4-finger Swipe Up").
+- Xposed logs (filter by `MFGX` tag) and reproduction steps.
 
 ## Credits
 
@@ -84,4 +122,4 @@ Special thanks to the author of [EdgeX](https://github.com/fcmfcm1999/EdgeX) —
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](LICENSE).
+[GNU General Public License v3.0](LICENSE)
