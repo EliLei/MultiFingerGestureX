@@ -1,17 +1,15 @@
-name: Build and Release
+name: Build and Beta Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*-beta*'
 
 permissions:
   contents: write
 
 jobs:
   build:
-    # Skip beta tags — they're handled by beta-release.yml
-    if: ${{ !contains(github.ref_name, '-beta') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -21,10 +19,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
+          # Tag form: v0.2.25-beta.1
           TAG=${GITHUB_REF#refs/tags/v}
           echo "name=$TAG" >> $GITHUB_OUTPUT
-          # Extract major.minor.patch as version code base
-          VERSION_CODE=$(echo $TAG | sed 's/\.//g' | sed 's/[^0-9]//g')
+          # versionCode uses only the base version (before -beta) so a beta never
+          # blocks upgrading to its corresponding stable release — e.g. both
+          # 0.2.25-beta.1 and stable 0.2.25 resolve to versionCode 225.
+          BASE=$(echo "$TAG" | sed 's/-.*//')
+          VERSION_CODE=$(echo "$BASE" | sed 's/\.//g' | sed 's/[^0-9]//g')
           echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
       - name: Get current date
@@ -73,32 +75,14 @@ jobs:
           mv "$APK_PATH" "$NEW_PATH"
           echo "path=$NEW_PATH" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
-        id: release
+      - name: Create GitHub Prerelease
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.apk.outputs.path }}
+          name: '[Beta] v${{ steps.version.outputs.name }}'
+          prerelease: true
           generate_release_notes: true
+          body: |
+            > ⚠️ **Beta build** — for testing only. Not published to the Xposed Modules Repo, and not offered as an update to stable-channel users.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release in Xposed Modules Repo
-        env:
-          GH_TOKEN: ${{ secrets.XPOSED_REPO_PAT }}
-          VERSION_NAME: ${{ steps.version.outputs.name }}
-          VERSION_CODE: ${{ steps.version.outputs.code }}
-          APK_PATH: ${{ steps.apk.outputs.path }}
-        run: |
-          # Fetch changelog from the release just created
-          CHANGELOG=$(gh release view "v${VERSION_NAME}" \
-            --repo "${{ github.repository }}" \
-            --json body -q ".body" 2>/dev/null || echo "")
-
-          # Create release in Xposed Modules Repo fork
-          # Tag = version code (must be numeric, increasing)
-          # Title = version name (human-readable)
-          gh release create "${VERSION_CODE}" \
-            --repo "Xposed-Modules-Repo/com.eli.mfgx" \
-            --title "${VERSION_NAME}" \
-            --notes "${CHANGELOG:-Release ${VERSION_NAME}}" \
-            "${APK_PATH}"
