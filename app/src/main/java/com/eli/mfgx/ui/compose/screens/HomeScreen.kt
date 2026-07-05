@@ -3,6 +3,7 @@ package com.eli.mfgx.ui.compose.screens
 import com.eli.mfgx.BuildConfig
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.clickable
@@ -131,7 +132,7 @@ private fun AppHeader() {
             text = stringResource(R.string.compose_app_subtitle),
             color = colors.onSurfaceDim,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
+            fontSize = 20.sp,
             modifier = Modifier.padding(top = 4.dp),
         )
     }
@@ -153,11 +154,29 @@ private fun GestureNavHint() {
             .padding(horizontal = 20.dp, vertical = 4.dp)
             .clickable {
                 try {
-                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    // Try gesture-nav-specific settings first, fall back to main settings
+                    val intent = try {
+                        Intent().apply {
+                            component = ComponentName(
+                                "com.android.settings",
+                                "com.android.settings.Settings\$SystemDashboardActivity"
+                            )
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                    } catch (_: Throwable) {
+                        Intent(Settings.ACTION_SETTINGS).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
                     }
                     context.startActivity(intent)
-                } catch (_: Throwable) {}
+                } catch (_: Throwable) {
+                    try {
+                        val fallback = Intent(Settings.ACTION_SETTINGS).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(fallback)
+                    } catch (_: Throwable) {}
+                }
             },
     )
 }
