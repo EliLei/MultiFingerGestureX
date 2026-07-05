@@ -32,6 +32,7 @@ internal class RecentsAnimationDriver(
     private val runnerProxy: Any by lazy { createAospRunnerProxy() }
     @Volatile private var appStartX = 0f
     @Volatile private var appStartY = 0f
+    @Volatile private var screenWidth = 0
     @Volatile private var screenHeight = 0
     @Volatile private var hasLeash = false
 
@@ -41,8 +42,9 @@ internal class RecentsAnimationDriver(
         hasLeash = false
         appLeash = null
         controller = null
+        screenWidth = context.resources.displayMetrics.widthPixels
         screenHeight = context.resources.displayMetrics.heightPixels
-        log("start: screenH=$screenHeight")
+        log("start: screen=${screenWidth}x${screenHeight}")
 
         // Run on caller thread (already on main handler from GestureManager)
         if (!acquireLeash()) {
@@ -52,13 +54,31 @@ internal class RecentsAnimationDriver(
         }
     }
 
+    /**
+     * Per-frame follow-finger transform.
+     *
+     * Math: scale window around its CENTER (not origin), then translate upward.
+     *   centerX = appStartX + screenWidth / 2
+     *   centerY = appStartY + screenHeight / 2
+     *   To scale around center by factor s:
+     *     posX = appStartX + centerX * (1 - s)
+     *     posY = appStartY + centerY * (1 - s)
+     *   Then translate up by finger progress:
+     *     posY -= progress * screenHeight * translateRatio
+     */
     fun drive(progress: Float, centroidX: Float, centroidY: Float) {
         val leash = appLeash
         if (leash == null || !hasLeash) return
         try {
-            val dy = -progress * screenHeight * 0.4f
-            val scale = 1f - progress * 0.08f
-            applyTransform(leash, appStartX, appStartY + dy, scale)
+            val s = 1f - progress * 0.10f    // scale: 1.0 → 0.90
+            // Scale around window center
+            val cx = appStartX + screenWidth * 0.5f
+            val cy = appStartY + screenHeight * 0.5f
+            val px = appStartX + cx * (1f - s)
+            val py = appStartY + cy * (1f - s)
+            // Translate upward
+            val ty = py - progress * screenHeight * 0.45f
+            applyTransform(leash, px, ty, s)
         } catch (t: Throwable) {
             log("drive err: ${t.message}")
         }
@@ -70,7 +90,9 @@ internal class RecentsAnimationDriver(
 
         // Reset leash to original position before action
         if (leash != null && hasLeash) {
-            try { applyTransform(leash, appStartX, appStartY, 1f) } catch (_: Throwable) { }
+            try { applyTransform(leash, appStartX, appStartY, 1f) } catch (_: Throwable) {
+                log("finish reset err: ${it.message}")
+            }
         }
         appLeash = null
         hasLeash = false
