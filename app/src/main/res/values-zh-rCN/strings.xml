@@ -143,10 +143,14 @@
     <string name="header_multitouch_gestures">多指手势</string>
     <string name="header_thresholds">灵敏度阈值</string>
     <string name="label_small_threshold">小阈值</string>
+    <string name="desc_small_threshold">每个手指需要移动的最小距离，超过后才判定手势方向（上/下滑）。增大可防止手势过于灵敏误触发。</string>
     <string name="label_large_threshold">大阈值</string>
     <string name="label_screenshot_threshold">截图阈值</string>
+    <string name="desc_screenshot_threshold">触发截屏所需的最小下滑距离。下滑距离小于此值时不触发截屏。</string>
     <string name="label_waiting_timeout">等待超时</string>
+    <string name="desc_waiting_timeout">从第一根手指落下开始，允许添加更多手指的最大等待时间。设置更长可以更从容地放置多指。</string>
     <string name="label_swipe_up_offset_y">上滑Y偏移</string>
+    <string name="desc_swipe_up_offset_y">微调上滑手势的虚拟触摸位置。正值将虚拟触摸向下推（更难触发），负值向上拉（更容易触发）。</string>
     <string name="hint_screen_size">屏幕尺寸：%1$s</string>
     <string name="tab_3_fingers">三指</string>
     <string name="tab_4_fingers">四指</string>

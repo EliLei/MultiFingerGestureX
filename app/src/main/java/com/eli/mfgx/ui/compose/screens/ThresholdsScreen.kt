@@ -1,6 +1,5 @@
 package com.eli.mfgx.ui.compose.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.eli.mfgx.R
@@ -29,11 +30,13 @@ import com.eli.mfgx.config.configPrefs
 import com.eli.mfgx.config.putConfig
 import com.eli.mfgx.ui.compose.components.EdgeXListGroup
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
+import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
 
 @Composable
 fun ThresholdsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.configPrefs() }
+    val colors = LocalEdgeXColors.current
 
     Column(
         modifier = Modifier
@@ -47,25 +50,41 @@ fun ThresholdsScreen(onBack: () -> Unit) {
                 context, prefs,
                 AppConfig.GESTURE_SMALL_THRESHOLD,
                 AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT.toString(),
-                R.string.label_small_threshold, "px", isDecimal = false
+                labelRes = R.string.label_small_threshold,
+                descRes = R.string.desc_small_threshold,
+                unit = "px",
+                isDecimal = false,
+                colors = colors,
             )
             ThresholdRow(
                 context, prefs,
                 AppConfig.GESTURE_SCREENSHOT_THRESHOLD,
                 AppConfig.GESTURE_SCREENSHOT_THRESHOLD_DEFAULT.toString(),
-                R.string.label_screenshot_threshold, "px", isDecimal = false
+                labelRes = R.string.label_screenshot_threshold,
+                descRes = R.string.desc_screenshot_threshold,
+                unit = "px",
+                isDecimal = false,
+                colors = colors,
             )
             ThresholdRow(
                 context, prefs,
                 AppConfig.GESTURE_WAITING_TIMEOUT_MS,
                 AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString(),
-                R.string.label_waiting_timeout, "ms", isDecimal = false
+                labelRes = R.string.label_waiting_timeout,
+                descRes = R.string.desc_waiting_timeout,
+                unit = "ms",
+                isDecimal = false,
+                colors = colors,
             )
             ThresholdRow(
                 context, prefs,
                 AppConfig.GESTURE_SWIPE_UP_OFFSET_Y,
                 AppConfig.GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT.toString(),
-                R.string.label_swipe_up_offset_y, "px", isDecimal = false
+                labelRes = R.string.label_swipe_up_offset_y,
+                descRes = R.string.desc_swipe_up_offset_y,
+                unit = "px",
+                isDecimal = false,
+                colors = colors,
             )
         }
         Spacer(modifier = Modifier.height(28.dp))
@@ -79,15 +98,27 @@ private fun ThresholdRow(
     key: String,
     default: String,
     labelRes: Int,
+    descRes: Int,
     unit: String,
     isDecimal: Boolean,
+    colors: com.eli.mfgx.ui.compose.theme.EdgeXColors,
 ) {
     var value by remember {
         mutableStateOf(prefs.getString(key, default) ?: default)
     }
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
-        Spacer(modifier = Modifier.height(6.dp))
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(descRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceDim,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
         OutlinedTextField(
             value = value,
             onValueChange = { input ->
@@ -104,7 +135,21 @@ private fun ThresholdRow(
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (isDecimal) KeyboardType.Decimal else KeyboardType.Number
             ),
-            trailingIcon = { Text(unit, style = MaterialTheme.typography.bodySmall) },
+            trailingIcon = {
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceDim,
+                )
+            },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = colors.onSurface,
+                unfocusedTextColor = colors.onSurface,
+                focusedBorderColor = colors.accent,
+                unfocusedBorderColor = colors.outlineStrong,
+                cursorColor = colors.accent,
+            ),
         )
     }
 }
