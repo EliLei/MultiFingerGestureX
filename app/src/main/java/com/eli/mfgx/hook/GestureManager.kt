@@ -146,7 +146,9 @@ object GestureManager {
             0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0
         )
         try {
-            InputManager.getInstance().injectInputEvent(event, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+            // InputManager.getInstance() and INJECT_INPUT_EVENT_MODE_ASYNC are @hide — use reflection
+            val im = XposedHelpers.callStaticMethod(InputManager::class.java, "getInstance")
+            XposedHelpers.callMethod(im, "injectInputEvent", event, 0) // 0 = INJECT_INPUT_EVENT_MODE_ASYNC
         } catch (t: Throwable) {
             log("injectVirtualMotionEvent($action) failed: ${t.message}")
         } finally {
