@@ -49,7 +49,6 @@ All settings are in the **Thresholds** screen:
 | Small Threshold | 12 px | Minimum pointer movement before direction is decided |
 | Screenshot Threshold | 80 px | Minimum downward distance to trigger screenshot |
 | Waiting Timeout | 300 ms | Max wait time before locking the active pointer set |
-| Quick Swipe Speed | 1.5 px/ms | (Reserved) |
 | Swipe-Up Y Offset | 0 px | Fine-tune the virtual touch position for SWIPE_UP |
 
 ## Tested On

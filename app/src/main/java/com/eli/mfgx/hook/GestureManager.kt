@@ -65,7 +65,6 @@ object GestureManager {
                 override fun smallThreshold(): Int = readInt(AppConfig.GESTURE_SMALL_THRESHOLD, AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT)
                 override fun screenshotThreshold(): Int = readInt(AppConfig.GESTURE_SCREENSHOT_THRESHOLD, AppConfig.GESTURE_SCREENSHOT_THRESHOLD_DEFAULT)
                 override fun waitingTimeoutMs(): Int = readInt(AppConfig.GESTURE_WAITING_TIMEOUT_MS, AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT)
-                override fun speedThreshold(): Float = readFloat(AppConfig.GESTURE_SPEED_THRESHOLD, AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT)
                 override fun screenHeight(): Int = systemContext?.resources?.displayMetrics?.heightPixels ?: 1080
                 override fun pilferPointers() = pilferGesturePointers()
                 override fun performScreenshot() {

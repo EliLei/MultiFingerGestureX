@@ -23,7 +23,6 @@ internal class MultiTouchGestureDetector(
         fun smallThreshold(): Int
         fun screenshotThreshold(): Int
         fun waitingTimeoutMs(): Int
-        fun speedThreshold(): Float
         fun screenHeight(): Int
         fun pilferPointers()
         fun performScreenshot()

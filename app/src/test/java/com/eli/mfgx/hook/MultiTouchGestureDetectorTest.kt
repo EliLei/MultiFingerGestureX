@@ -32,7 +32,6 @@ class MultiTouchGestureDetectorTest {
         override fun smallThreshold() = 12
         override fun screenshotThreshold() = 80
         override fun waitingTimeoutMs() = 300
-        override fun speedThreshold() = 1.5f
         override fun screenHeight() = 2000
         override fun pilferPointers() { pilfered = true }
         override fun performScreenshot() { screenshotTaken = true }
