@@ -126,7 +126,7 @@ private fun AppHeader() {
         Text(
             text = stringResource(R.string.compose_app_subtitle),
             color = colors.onSurfaceDim,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             fontSize = 14.sp,
             modifier = Modifier.padding(top = 4.dp),
         )

@@ -500,14 +500,14 @@
     <string name="compose_more">更多</string>
     <string name="compose_info">信息</string>
     <string name="compose_edit">编辑</string>
-    <string name="compose_app_subtitle">全局手势</string>
+    <string name="compose_app_subtitle">如需自定义手势，请回退至 v0.2.24</string>
     <string name="compose_route_home">主页</string>
     <string name="compose_route_thresholds">阈值</string>
     <string name="compose_master_toggle">多指手势</string>
     <string name="compose_master_toggle_desc">下扫截图 · 上扫导航</string>
     <string name="compose_module_active">模块已激活</string>
     <string name="compose_module_inactive">未激活</string>
-    <string name="compose_home_hero_title">你的手势\n掌控一切</string>
+    <string name="compose_home_hero_title">三指以上在屏幕上：\n下滑 → 截屏\n上滑 → 回桌面 / 最近任务\n左滑右滑 → 切换应用</string>
     <string name="compose_home_hero_subtitle">已配置 %1$d 个手势动作</string>
     <string name="compose_stat_gestures">手势</string>
     <string name="compose_stat_frozen">冻结抽屉</string>

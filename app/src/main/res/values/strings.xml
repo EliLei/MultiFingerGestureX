@@ -504,14 +504,14 @@
     <string name="compose_more">More</string>
     <string name="compose_info">Info</string>
     <string name="compose_edit">Edit</string>
-    <string name="compose_app_subtitle">Global Gestures</string>
+    <string name="compose_app_subtitle">For custom gestures, roll back to v0.2.24</string>
     <string name="compose_route_home">Home</string>
     <string name="compose_route_thresholds">Thresholds</string>
     <string name="compose_master_toggle">Multi-Finger Gestures</string>
     <string name="compose_master_toggle_desc">Swipe down to screenshot · swipe up to navigate</string>
     <string name="compose_module_active">Module Active</string>
     <string name="compose_module_inactive">Not Activated</string>
-    <string name="compose_home_hero_title">Multi-Finger\nGesture Control</string>
+    <string name="compose_home_hero_title">3+ fingers on screen:\nSwipe Down → Screenshot\nSwipe Up → Home / Recents\nSwipe Left / Right → Switch app</string>
     <string name="compose_home_hero_subtitle">%1$d gesture actions configured</string>
     <string name="compose_stat_gestures">Gestures</string>
     <string name="compose_stat_frozen">Freezer Drawer</string>
