@@ -141,9 +141,14 @@ private fun AppHeader() {
 private fun GestureNavHint() {
     val context = LocalContext.current
     val colors = LocalEdgeXColors.current
+    val isGestureNav = remember {
+        try {
+            Settings.Secure.getInt(context.contentResolver, "navigation_mode", 0) == 2
+        } catch (_: Throwable) { true } // assume enabled if unreadable
+    }
     Text(
         text = stringResource(R.string.compose_gesture_nav_hint),
-        color = colors.warn,
+        color = if (isGestureNav) colors.onSurfaceDim else colors.warn,
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         modifier = Modifier
