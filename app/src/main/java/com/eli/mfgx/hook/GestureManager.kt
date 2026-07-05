@@ -71,16 +71,30 @@ object GestureManager {
                 override fun performScreenshot() {
                     systemContext?.let { mainHandler().post { actionDispatcher.triggerScreenshot(it) } }
                 }
-                override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float) {
+                override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float, downTime: Long) {
                     mainHandler().post {
                         val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
                         virtualStartY = startY
-                        virtualDownTime = SystemClock.uptimeMillis()
-                        // Virtual DOWN at (startX, bottom edge)
-                        injectVirtualMotionEvent(MotionEvent.ACTION_DOWN, startX, screenH - 1f, virtualDownTime, virtualDownTime)
-                        // Virtual MOVE at (currentX, screenH - 1 - startY + currentY + offsetY)
+                        virtualDownTime = downTime
+                        // Virtual DOWN at (startX, bottom edge) with original gesture downTime
+                        val downY = screenH - 1f
+                        injectVirtualMotionEvent(MotionEvent.ACTION_DOWN, startX, downY, downTime, downTime)
+                        // Final MOVE target
                         val vY = screenH - 1f - startY + currentY + swipeUpOffsetY()
-                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
+                        val now = SystemClock.uptimeMillis()
+                        val totalDt = now - downTime
+                        if (totalDt > 10) {
+                            // Inject 2 linearly interpolated MOVE events for smooth entry
+                            for (i in 1..2) {
+                                val frac = i / 3f
+                                val t = downTime + (totalDt * frac).toLong()
+                                val x = startX + (currentX - startX) * frac
+                                val y = downY + (vY - downY) * frac
+                                injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, x, y, downTime, t)
+                            }
+                        }
+                        // Final MOVE at current position
+                        injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, vY, downTime, now)
                     }
                 }
                 override fun updateSwipeUpVirtual(currentX: Float, currentY: Float) {

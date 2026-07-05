@@ -36,7 +36,7 @@ class MultiTouchGestureDetectorTest {
         override fun screenHeight() = 2000
         override fun pilferPointers() { pilfered = true }
         override fun performScreenshot() { screenshotTaken = true }
-        override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float) {
+        override fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float, downTime: Long) {
             virtualStarted = true
             lastStartX = startX; lastStartY = startY
             lastCurrentX = currentX; lastCurrentY = currentY

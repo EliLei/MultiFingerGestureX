@@ -27,8 +27,8 @@ internal class MultiTouchGestureDetector(
         fun screenHeight(): Int
         fun pilferPointers()
         fun performScreenshot()
-        /** Inject virtual DOWN + initial MOVE at bottom edge to trigger native gesture system */
-        fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float)
+        /** Inject virtual DOWN (with original gesture downTime) + interpolated MOVEs + final MOVE */
+        fun startSwipeUpVirtual(startX: Float, startY: Float, currentX: Float, currentY: Float, downTime: Long)
         /** Inject virtual MOVE to track finger movement */
         fun updateSwipeUpVirtual(currentX: Float, currentY: Float)
         /** Inject virtual UP to complete the gesture */
@@ -146,7 +146,7 @@ internal class MultiTouchGestureDetector(
                     timer.cancelTimeout()
                     when (t) {
                         GestureDecisions.ActiveTransition.SWIPE_DOWN -> state = State.SWIPE_DOWN
-                        GestureDecisions.ActiveTransition.SWIPE_UP -> enterSwipeUp()
+                        GestureDecisions.ActiveTransition.SWIPE_UP -> enterSwipeUp(e.downTime)
                         GestureDecisions.ActiveTransition.MIXED_INACTIVE -> reset()
                     }
                 }
@@ -201,14 +201,14 @@ internal class MultiTouchGestureDetector(
 
     // ---- helpers ----
 
-    private fun enterSwipeUp() {
+    private fun enterSwipeUp(downTime: Long) {
         state = State.SWIPE_UP
         val ps = pointers.values
         val sX = ps.map { it.startX }.average().toFloat()
         val sY = ps.map { it.startY }.average().toFloat()
         val cX = ps.map { it.currentX }.average().toFloat()
         val cY = ps.map { it.currentY }.average().toFloat()
-        callbacks.startSwipeUpVirtual(sX, sY, cX, cY)
+        callbacks.startSwipeUpVirtual(sX, sY, cX, cY, downTime)
         callbacks.log("-> SWIPE_UP, virtual injection (sX=$sX sY=$sY cX=$cX cY=$cY)")
     }
 
