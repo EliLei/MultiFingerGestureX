@@ -33,8 +33,6 @@ object GestureManager {
     // 排空 monitor InputChannel 的接收器：若不排空，dispatcher 写入会撑满 channel 致 monitor 失效。
     private var drainReceiver: InputEventReceiver? = null
 
-    private val eventReplay = EventReplayHandoff { msg -> log(msg) }
-
     private val configRepository = HookConfigRepository(
         updateKeyConfig = { /* KeyManager 已移除，空实现 */ },
         log = ::log,
@@ -48,88 +46,53 @@ object GestureManager {
         )
     }
 
-    private val gestureDetector by lazy {
-        MultiTouchGestureDetector(
-            handoff = eventReplay,
-            callbacks = object : MultiTouchGestureDetector.Callbacks {
-                override fun minEnabledFingerCount(): Int? {
-                    var min: Int? = null
-                    for (count in AppConfig.MULTI_TOUCH_FINGER_COUNTS) {
-                        for (type in MultiTouchGestureType.values()) {
-                            val enabled = configRepository.get(
-                                AppConfig.gestureEnabledKey(count, type.key), "false"
-                            ) == "true"
-                            if (enabled) {
-                                if (min == null || count < min!!) min = count
-                            }
-                        }
-                    }
-                    return min
-                }
-
-                override fun maxEnabledFingerCount(): Int? {
-                    var max: Int? = null
-                    for (count in AppConfig.MULTI_TOUCH_FINGER_COUNTS) {
-                        for (type in MultiTouchGestureType.values()) {
-                            val enabled = configRepository.get(
-                                AppConfig.gestureEnabledKey(count, type.key), "false"
-                            ) == "true"
-                            if (enabled) {
-                                if (max == null || count > max!!) max = count
-                            }
-                        }
-                    }
-                    return max
-                }
-
-                override fun isGestureEnabled(count: Int, type: MultiTouchGestureType): Boolean =
-                    configRepository.get(AppConfig.gestureEnabledKey(count, type.key), "false") == "true"
-
-                override fun resolveAction(count: Int, type: MultiTouchGestureType): String =
-                    configRepository.get(AppConfig.gestureActionKey(count, type.key), "")
-
-                override fun dispatchAction(count: Int, type: MultiTouchGestureType, context: Context) {
-                    val action = resolveAction(count, type)
-                    if (action.isEmpty() || action == "none") return
-                    mainHandler().post {
-                        actionDispatcher.triggerMultiTouchAction(action, context)
-                    }
-                }
-
-                override fun smallThreshold(): Int =
-                    configRepository.get(
-                        AppConfig.GESTURE_SMALL_THRESHOLD,
-                        AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT.toString()
-                    ).toIntOrNull() ?: AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT
-
-                override fun largeThreshold(): Int =
-                    configRepository.get(
-                        AppConfig.GESTURE_LARGE_THRESHOLD,
-                        AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT.toString()
-                    ).toIntOrNull() ?: AppConfig.GESTURE_LARGE_THRESHOLD_DEFAULT
-
-                override fun waitingTimeoutMs(): Int =
-                    configRepository.get(
-                        AppConfig.GESTURE_WAITING_TIMEOUT_MS,
-                        AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT.toString()
-                    ).toIntOrNull() ?: AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT
-
-                override fun speedThreshold(): Float =
-                    configRepository.get(
-                        AppConfig.GESTURE_SPEED_THRESHOLD,
-                        AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT.toString()
-                    ).toFloatOrNull() ?: AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT
-
-                override fun pilferPointers() = pilferGesturePointers()
-
-//                override fun liftBeforeCancel(): Boolean =
-//                    configRepository.get(AppConfig.GESTURE_INJECT_LIFT_BEFORE_CANCEL, "true") != "false"
-
-                override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
-            },
-            handler = mainHandler(),
+    private val recentsDriver by lazy {
+        RecentsAnimationDriver(
+            handlerProvider = ::mainHandler,
+            contextProvider = { systemContext },
+            performHome = { ctx -> GlobalActionHelper.performGlobalAction(ctx, GlobalActionHelper.GLOBAL_ACTION_HOME) },
+            performRecents = { ctx -> GlobalActionHelper.performGlobalAction(ctx, GlobalActionHelper.GLOBAL_ACTION_RECENTS) },
+            switchApp = { forward, ctx -> actionDispatcher.triggerSwitchApp(ctx, forward) },
+            log = { msg -> log("[Recents] $msg") },
         )
     }
+
+    private fun onGestureTimeout() { gestureDetector.onTimeout() }
+
+    private val gestureTimer: HandlerTimer = HandlerTimer(mainHandler(), ::onGestureTimeout)
+
+    private val gestureDetector: MultiTouchGestureDetector by lazy {
+        MultiTouchGestureDetector(
+            callbacks = object : MultiTouchGestureDetector.Callbacks {
+                override fun smallThreshold(): Int = readInt(AppConfig.GESTURE_SMALL_THRESHOLD, AppConfig.GESTURE_SMALL_THRESHOLD_DEFAULT)
+                override fun screenshotThreshold(): Int = readInt(AppConfig.GESTURE_SCREENSHOT_THRESHOLD, AppConfig.GESTURE_SCREENSHOT_THRESHOLD_DEFAULT)
+                override fun waitingTimeoutMs(): Int = readInt(AppConfig.GESTURE_WAITING_TIMEOUT_MS, AppConfig.GESTURE_WAITING_TIMEOUT_MS_DEFAULT)
+                override fun speedThreshold(): Float = readFloat(AppConfig.GESTURE_SPEED_THRESHOLD, AppConfig.GESTURE_SPEED_THRESHOLD_DEFAULT)
+                override fun screenHeight(): Int = systemContext?.resources?.displayMetrics?.heightPixels ?: 1080
+                override fun pilferPointers() = pilferGesturePointers()
+                override fun performScreenshot() {
+                    systemContext?.let { mainHandler().post { actionDispatcher.triggerScreenshot(it) } }
+                }
+                override fun startRecents() {
+                    systemContext?.let { mainHandler().post { recentsDriver.start(it) } }
+                }
+                override fun driveRecents(progress: Float, centroidX: Float, centroidY: Float) {
+                    mainHandler().post { recentsDriver.drive(progress, centroidX, centroidY) }
+                }
+                override fun finishRecents(action: GestureDecisions.SwipeUpAction) {
+                    systemContext?.let { mainHandler().post { recentsDriver.finish(action, it) } }
+                }
+                override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
+            },
+            timer = gestureTimer,
+        )
+    }
+
+    private fun readInt(key: String, default: Int): Int =
+        configRepository.get(key, default.toString()).toIntOrNull() ?: default
+
+    private fun readFloat(key: String, default: Float): Float =
+        configRepository.get(key, default.toString()).toFloatOrNull() ?: default
 
     private fun mainHandler(): Handler =
         mHandler ?: Handler(Looper.getMainLooper()).also { mHandler = it }
@@ -259,10 +222,40 @@ object GestureManager {
     fun handleMotionEvent(event: android.view.MotionEvent, context: Context): Boolean {
         ensureSystemServerInitialized(context)
         if (configRepository.get(AppConfig.GESTURES_ENABLED, "true") != "true") return false
-        return gestureDetector.handle(event, context)
+        return gestureDetector.handlePointerEvent(toPointerEvent(event))
+    }
+
+    private fun toPointerEvent(event: android.view.MotionEvent): MultiTouchGestureDetector.PointerEvent {
+        val n = event.pointerCount
+        val list = ArrayList<MultiTouchGestureDetector.Pointer>(n)
+        for (i in 0 until n) {
+            list.add(MultiTouchGestureDetector.Pointer(event.getPointerId(i), event.getRawX(i), event.getRawY(i)))
+        }
+        return MultiTouchGestureDetector.PointerEvent(
+            actionMasked = event.actionMasked,
+            actionIndex = event.actionIndex,
+            pointers = list,
+            eventTime = event.eventTime,
+            downTime = event.downTime,
+        )
     }
 
     fun executeAction(action: String, context: Context) {
         actionDispatcher.executeKeyAction(action, context)
+    }
+
+    private class HandlerTimer(
+        handler: Handler,
+        private val onFire: () -> Unit,
+    ) : MultiTouchGestureDetector.Timer {
+        private val runnable = Runnable { onFire() }
+        private val handlerRef = handler
+        override fun armTimeout(ms: Long) {
+            handlerRef.removeCallbacks(runnable)
+            handlerRef.postDelayed(runnable, ms)
+        }
+        override fun cancelTimeout() {
+            handlerRef.removeCallbacks(runnable)
+        }
     }
 }

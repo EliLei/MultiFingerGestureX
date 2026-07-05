@@ -123,6 +123,14 @@ internal class GestureActionDispatcher(
         }
     }
 
+    fun triggerScreenshot(context: Context) {
+        handlerProvider().post { performScreenshot(context) }
+    }
+
+    fun triggerSwitchApp(context: Context, forward: Boolean) {
+        handlerProvider().post { switchApp(context, forward) }
+    }
+
     fun adjustBrightness(context: Context, up: Boolean) =
         com.eli.mfgx.action.AppActionExecutor.adjustBrightness(context, up)
 
