@@ -505,6 +505,7 @@
     <string name="compose_info">信息</string>
     <string name="compose_edit">编辑</string>
     <string name="compose_app_subtitle">如需自定义手势，请回退至 v0.2.24</string>
+    <string name="compose_gesture_nav_hint">上滑手势依赖于系统的手势导航，点击设置</string>
     <string name="compose_route_home">主页</string>
     <string name="compose_route_thresholds">阈值</string>
     <string name="compose_master_toggle">多指手势</string>

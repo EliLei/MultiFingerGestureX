@@ -3,6 +3,9 @@ package com.eli.mfgx.ui.compose.screens
 import com.eli.mfgx.BuildConfig
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -102,6 +105,7 @@ fun HomeScreen(
         )
         AppHeader()
         HeroCard(state.gesturesEnabled, state.moduleActive)
+        GestureNavHint()
         MasterToggleCard(state, callbacks)
         ThresholdsEntry(callbacks)
         SectionLabel(stringResource(R.string.menu_advanced))
@@ -131,6 +135,28 @@ private fun AppHeader() {
             modifier = Modifier.padding(top = 4.dp),
         )
     }
+}
+
+@Composable
+private fun GestureNavHint() {
+    val context = LocalContext.current
+    val colors = LocalEdgeXColors.current
+    Text(
+        text = stringResource(R.string.compose_gesture_nav_hint),
+        color = colors.warn,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .clickable {
+                try {
+                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                } catch (_: Throwable) {}
+            },
+    )
 }
 
 @Composable

@@ -509,6 +509,7 @@
     <string name="compose_info">Info</string>
     <string name="compose_edit">Edit</string>
     <string name="compose_app_subtitle">For custom gestures, roll back to v0.2.24</string>
+    <string name="compose_gesture_nav_hint">Swipe-up gestures require system gesture navigation — tap to configure</string>
     <string name="compose_route_home">Home</string>
     <string name="compose_route_thresholds">Thresholds</string>
     <string name="compose_master_toggle">Multi-Finger Gestures</string>
