@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.sp
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.ui.compose.EdgeXRoute
-import com.eli.mfgx.ui.compose.HomeStats
 import com.eli.mfgx.ui.compose.HomeUiState
 import com.eli.mfgx.ui.compose.components.EdgeXBottomSheet
 import com.eli.mfgx.ui.compose.components.EdgeXDivider
@@ -60,6 +59,7 @@ data class HomeCallbacks(
     val openRoute: (EdgeXRoute) -> Unit,
     val showToast: (String) -> Unit,
     val restartSystemUi: () -> Unit,
+    val setGesturesEnabled: (Boolean) -> Unit,
     val setHaptic: (Boolean) -> Unit,
     val setHapticType: (String) -> Unit,
     val setArcDrawer: (Boolean) -> Unit,
@@ -101,8 +101,9 @@ fun HomeScreen(
             },
         )
         AppHeader()
-        HeroCard(state.stats, state.moduleActive)
-        HomeTiles(state, callbacks)
+        HeroCard(state.gesturesEnabled, state.moduleActive)
+        MasterToggleCard(state, callbacks)
+        ThresholdsEntry(callbacks)
         SectionLabel(stringResource(R.string.menu_advanced))
         AdvancedSettings(state, callbacks)
         SectionLabel(stringResource(R.string.compose_section_about))
@@ -133,7 +134,7 @@ private fun AppHeader() {
 }
 
 @Composable
-private fun HeroCard(stats: HomeStats, moduleActive: Boolean) {
+private fun HeroCard(gesturesEnabled: Boolean, moduleActive: Boolean) {
     val colors = LocalEdgeXColors.current
     val statusColor = if (moduleActive) Color(0xFF4CAF50) else Color(0xFFFFB74D)
     val statusTextColor = if (moduleActive) colors.accentSoft else Color(0xFFB45309)
@@ -175,90 +176,45 @@ private fun HeroCard(stats: HomeStats, moduleActive: Boolean) {
             modifier = Modifier.padding(top = 14.dp),
         )
         Text(
-            text = stringResource(R.string.compose_home_hero_subtitle, stats.configuredGestures),
+            text = stringResource(if (gesturesEnabled) R.string.compose_enabled else R.string.compose_disabled),
             color = colors.onAccentSoft.copy(alpha = 0.72f),
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
             modifier = Modifier.padding(top = 6.dp),
         )
-        Row(
-            modifier = Modifier
-                .padding(top = 18.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(colors.onAccentSoft)
-                .padding(6.dp),
+    }
+}
+
+
+@Composable
+private fun MasterToggleCard(state: HomeUiState, callbacks: HomeCallbacks) {
+    EdgeXListGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+        EdgeXRow(
+            title = stringResource(R.string.compose_master_toggle),
+            subtitle = stringResource(R.string.compose_master_toggle_desc),
+            icon = EdgeXIcons.Gesture,
+            onClick = { callbacks.setGesturesEnabled(!state.gesturesEnabled) },
         ) {
-            HeroStat("${stats.configuredGestures}", stringResource(R.string.compose_stat_gestures), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun HeroStat(value: String, label: String, modifier: Modifier = Modifier) {
-    val colors = LocalEdgeXColors.current
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .padding(horizontal = 10.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(value, color = colors.accentSoft2, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-        Text(label, color = colors.accentSoft2.copy(alpha = 0.70f), fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-    }
-}
-
-@Composable
-private fun HomeTiles(state: HomeUiState, callbacks: HomeCallbacks) {
-    val colors = LocalEdgeXColors.current
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        TileRow {
-            FeatureTile(
-                title = stringResource(R.string.header_multitouch_gestures),
-                meta = if (state.gesturesEnabled) stringResource(R.string.compose_home_gesture_meta, state.stats.configuredGestures) else stringResource(R.string.compose_disabled),
-                icon = EdgeXIcons.Gesture,
-                onClick = { callbacks.openRoute(EdgeXRoute.MultiTouchGestures) },
-                tag = "home_tile_gestures",
-                modifier = Modifier.weight(1f),
+            EdgeXSwitch(
+                checked = state.gesturesEnabled,
+                onCheckedChange = { callbacks.setGesturesEnabled(it) },
             )
         }
     }
 }
 
 @Composable
-private fun TileRow(content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        content = content,
-    )
-}
-
-@Composable
-private fun FeatureTile(
-    title: String,
-    meta: String,
-    icon: Int,
-    onClick: () -> Unit,
-    tag: String,
-    modifier: Modifier = Modifier,
-    iconBackground: Color = LocalEdgeXColors.current.accentSoft,
-    iconTint: Color = LocalEdgeXColors.current.onAccentSoft,
-) {
-    EdgeXTile(
-        title = title,
-        meta = meta,
-        icon = icon,
-        onClick = onClick,
-        modifier = modifier
-            .testTag(tag)
-            .height(132.dp),
-        iconBackground = iconBackground,
-        iconTint = iconTint,
-    )
+private fun ThresholdsEntry(callbacks: HomeCallbacks) {
+    EdgeXListGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
+        EdgeXRow(
+            title = stringResource(R.string.header_thresholds),
+            subtitle = stringResource(R.string.compose_master_toggle_desc),
+            icon = EdgeXIcons.Gesture,
+            onClick = { callbacks.openRoute(EdgeXRoute.Thresholds) },
+        ) {
+            EdgeXIcon(EdgeXIcons.ChevronRight, contentDescription = null, tint = LocalEdgeXColors.current.onSurfaceDim)
+        }
+    }
 }
 
 @Composable

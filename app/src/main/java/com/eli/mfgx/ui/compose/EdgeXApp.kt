@@ -45,7 +45,7 @@ import com.eli.mfgx.ui.compose.components.EdgeXToast
 import com.eli.mfgx.ui.compose.components.UpdateDialog
 import com.eli.mfgx.ui.compose.screens.HomeCallbacks
 import com.eli.mfgx.ui.compose.screens.HomeScreen
-import com.eli.mfgx.ui.compose.screens.MultiTouchGesturesScreen
+import com.eli.mfgx.ui.compose.screens.ThresholdsScreen
 import com.eli.mfgx.ui.compose.theme.EdgeXAccent
 import com.eli.mfgx.ui.compose.theme.EdgeXTheme
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
@@ -56,22 +56,17 @@ import kotlinx.coroutines.delay
 
 enum class EdgeXRoute(@StringRes val labelRes: Int) {
     Home(R.string.compose_route_home),
-    MultiTouchGestures(R.string.header_multitouch_gestures),
+    Thresholds(R.string.compose_route_thresholds),
     About(R.string.menu_about),
 }
 
 data class HomeUiState(
-    val stats: HomeStats,
     val gesturesEnabled: Boolean,
     val haptic: Boolean,
     val hapticType: String,
     val moduleActive: Boolean,
     val accent: EdgeXAccent,
     val darkMode: Boolean,
-)
-
-data class HomeStats(
-    val configuredGestures: Int,
 )
 
 @Composable
@@ -134,10 +129,7 @@ fun EdgeXApp() {
     EdgeXTheme(darkTheme = uiState.darkMode, accent = uiState.accent) {
         val colors = LocalEdgeXColors.current
         BackHandler(enabled = stack.size > 1) {
-            when (stack.last()) {
-                EdgeXRoute.MultiTouchGestures -> popRouteAndRefresh()
-                else -> popRoute()
-            }
+            popRoute()
         }
         Box(
             modifier = Modifier
@@ -159,6 +151,10 @@ fun EdgeXApp() {
                                     showToast(restartSystemUiFailed)
                                 }
                             },
+                            setGesturesEnabled = {
+                                context.putConfig(AppConfig.GESTURES_ENABLED, it)
+                                refresh()
+                            },
                             setHaptic = {
                                 context.putConfig(AppConfig.HAPTIC_FEEDBACK, it)
                                 refresh()
@@ -172,10 +168,7 @@ fun EdgeXApp() {
                             },
                         ),
                     )
-                    EdgeXRoute.MultiTouchGestures -> MultiTouchGesturesScreen(
-                        onBack = ::popRouteAndRefresh,
-                        showToast = ::showToast,
-                    )
+                    EdgeXRoute.Thresholds -> ThresholdsScreen(onBack = ::popRoute)
                     EdgeXRoute.About -> AboutScreen(
                         onBack = ::popRoute,
                         showToast = ::showToast,
@@ -267,7 +260,6 @@ private fun restartSystemUi(onFailure: () -> Unit) {
 
 private fun Context.readHomeUiState(): HomeUiState =
     HomeUiState(
-        stats = readHomeStats(),
         gesturesEnabled = getConfigBool(AppConfig.GESTURES_ENABLED),
         haptic = getConfigBool(AppConfig.HAPTIC_FEEDBACK, default = true),
         hapticType = getConfigString(
@@ -288,18 +280,3 @@ private fun Context.readHomeUiState(): HomeUiState =
             }
         },
     )
-
-private fun Context.readHomeStats(): HomeStats {
-    val prefs = configPrefs()
-    var configuredGestures = 0
-    for (count in AppConfig.MULTI_TOUCH_FINGER_COUNTS) {
-        for (type in AppConfig.MULTI_TOUCH_GESTURE_TYPES) {
-            val enabled = prefs.getString(AppConfig.gestureEnabledKey(count, type), "false") == "true"
-            val action = prefs.getString(AppConfig.gestureActionKey(count, type), "")
-            if (enabled && !action.isNullOrBlank() && action != "none") {
-                configuredGestures++
-            }
-        }
-    }
-    return HomeStats(configuredGestures = configuredGestures)
-}
