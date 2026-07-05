@@ -158,7 +158,7 @@
     <string name="label_waiting_timeout">Waiting Timeout</string>
     <string name="desc_waiting_timeout">Maximum time (from first finger down) to add more fingers before locking the active finger set. Longer = more forgiving for slow multi-finger placement.</string>
     <string name="label_swipe_up_offset_y">Swipe-Up Y Offset</string>
-    <string name="desc_swipe_up_offset_y">Fine-tune the virtual touch position for swipe-up gestures. Positive values push the virtual touch downward (makes it harder to trigger). Negative values pull it upward.</string>
+    <string name="desc_swipe_up_offset_y">Fine-tune the swipe-up Home/Recents trigger sensitivity. Positive values make it harder to trigger, negative values make it easier.</string>
     <string name="hint_screen_size">Screen size: %1$s</string>
     <string name="label_lift_before_cancel">Lift before cancel</string>
     <string name="desc_lift_before_cancel">Inject off-screen lift sequence before ACTION_CANCEL when multi-touch gesture activates. Disable to cancel first, then lift.</string>

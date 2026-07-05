@@ -150,7 +150,7 @@
     <string name="label_waiting_timeout">等待超时</string>
     <string name="desc_waiting_timeout">从第一根手指落下开始，允许添加更多手指的最大等待时间。设置更长可以更从容地放置多指。</string>
     <string name="label_swipe_up_offset_y">上滑Y偏移</string>
-    <string name="desc_swipe_up_offset_y">微调上滑手势的虚拟触摸位置。正值将虚拟触摸向下推（更难触发），负值向上拉（更容易触发）。</string>
+    <string name="desc_swipe_up_offset_y">微调上滑手势的"回桌面"/"最近任务"功能触发。正值将更难触发，负值更容易触发。</string>
     <string name="hint_screen_size">屏幕尺寸：%1$s</string>
     <string name="tab_3_fingers">三指</string>
     <string name="tab_4_fingers">四指</string>
