@@ -86,6 +86,36 @@ fun ThresholdsScreen(onBack: () -> Unit) {
                 isDecimal = false,
                 colors = colors,
             )
+            ThresholdRow(
+                context, prefs,
+                AppConfig.GESTURE_SWIPE_UP_Y_FACTOR,
+                AppConfig.GESTURE_SWIPE_UP_Y_FACTOR_DEFAULT.toString(),
+                labelRes = R.string.label_swipe_up_y_factor,
+                descRes = R.string.desc_swipe_up_y_factor,
+                unit = "×",
+                isDecimal = true,
+                colors = colors,
+            )
+            ThresholdRow(
+                context, prefs,
+                AppConfig.GESTURE_MAX_FINGER_DISTANCE,
+                AppConfig.GESTURE_MAX_FINGER_DISTANCE_DEFAULT.toString(),
+                labelRes = R.string.label_max_finger_distance,
+                descRes = R.string.desc_max_finger_distance,
+                unit = "px",
+                isDecimal = false,
+                colors = colors,
+                footer = {
+                    val dm = context.resources.displayMetrics
+                    val hint = stringResource(R.string.hint_screen_size, "${dm.widthPixels}×${dm.heightPixels}")
+                    Text(
+                        text = hint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceDim,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                },
+            )
         }
         Spacer(modifier = Modifier.height(28.dp))
     }
@@ -102,6 +132,7 @@ private fun ThresholdRow(
     unit: String,
     isDecimal: Boolean,
     colors: com.eli.mfgx.ui.compose.theme.EdgeXColors,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var value by remember {
         mutableStateOf(prefs.getString(key, default) ?: default)
@@ -151,5 +182,6 @@ private fun ThresholdRow(
                 cursorColor = colors.accent,
             ),
         )
+        footer?.invoke()
     }
 }

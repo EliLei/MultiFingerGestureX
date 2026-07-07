@@ -79,7 +79,7 @@ object GestureManager {
                         val downY = screenH - 1f
                         injectVirtualMotionEvent(MotionEvent.ACTION_DOWN, startX, downY, downTime, downTime)
                         // Final MOVE target
-                        val vY = screenH - 1f - startY + currentY + swipeUpOffsetY()
+                        val vY = swipeUpVirtualY(currentY)
                         val now = SystemClock.uptimeMillis()
                         val totalDt = now - downTime
                         if (totalDt > 10) {
@@ -99,21 +99,21 @@ object GestureManager {
                 override fun updateSwipeUpVirtual(currentX: Float, currentY: Float) {
                     mainHandler().post {
                         if (virtualDownTime == 0L) return@post
-                        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
-                        val vY = screenH - 1f - virtualStartY + currentY + swipeUpOffsetY()
+                        val vY = swipeUpVirtualY(currentY)
                         injectVirtualMotionEvent(MotionEvent.ACTION_MOVE, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
                     }
                 }
                 override fun finishSwipeUpVirtual(currentX: Float, currentY: Float) {
                     mainHandler().post {
                         if (virtualDownTime == 0L) return@post
-                        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
-                        val vY = screenH - 1f - virtualStartY + currentY + swipeUpOffsetY()
+                        val vY = swipeUpVirtualY(currentY)
                         injectVirtualMotionEvent(MotionEvent.ACTION_UP, currentX, vY, virtualDownTime, SystemClock.uptimeMillis())
                         virtualDownTime = 0L
                         virtualStartY = 0f
                     }
                 }
+                override fun maxFingerDistance(): Int =
+                    readInt(AppConfig.GESTURE_MAX_FINGER_DISTANCE, AppConfig.GESTURE_MAX_FINGER_DISTANCE_DEFAULT)
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
             timer = gestureTimer,
@@ -129,6 +129,16 @@ object GestureManager {
     /** SWIPE_UP virtual Y offset in pixels. Positive = push gesture downward, negative = pull upward. */
     private fun swipeUpOffsetY(): Float =
         readInt(AppConfig.GESTURE_SWIPE_UP_OFFSET_Y, AppConfig.GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT).toFloat()
+
+    /** SWIPE_UP virtual Y movement multiplier. >1 amplifies, <1 dampens finger displacement. */
+    private fun swipeUpYFactor(): Float =
+        readFloat(AppConfig.GESTURE_SWIPE_UP_Y_FACTOR, AppConfig.GESTURE_SWIPE_UP_Y_FACTOR_DEFAULT)
+
+    /** Compute virtual Y from current finger Y, using saved [virtualStartY] and configured factor. */
+    private fun swipeUpVirtualY(currentY: Float): Float {
+        val screenH = (systemContext?.resources?.displayMetrics?.heightPixels ?: 1080).toFloat()
+        return screenH - 1f - (virtualStartY - currentY) * swipeUpYFactor() + swipeUpOffsetY()
+    }
 
     private fun mainHandler(): Handler =
         mHandler ?: Handler(Looper.getMainLooper()).also { mHandler = it }

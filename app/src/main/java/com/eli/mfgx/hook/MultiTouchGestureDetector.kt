@@ -1,6 +1,7 @@
 package com.eli.mfgx.hook
 
 import android.view.MotionEvent
+import kotlin.math.sqrt
 
 /**
  * Multi-finger gesture state machine: INACTIVE → WAITING → ACTIVE → SWIPE_DOWN / SWIPE_UP → INACTIVE.
@@ -32,6 +33,9 @@ internal class MultiTouchGestureDetector(
         fun updateSwipeUpVirtual(currentX: Float, currentY: Float)
         /** Inject virtual UP to complete the gesture */
         fun finishSwipeUpVirtual(currentX: Float, currentY: Float)
+        /** Max allowed distance (px) between any finger and ALL others when entering ACTIVE.
+         *  If any finger exceeds this from every other finger, the gesture is rejected. */
+        fun maxFingerDistance(): Int
         fun log(message: String)
     }
 
@@ -122,6 +126,12 @@ internal class MultiTouchGestureDetector(
         syncPointers(e, registerNew = true)
         if (state == State.WAITING) {
             if (pointers.size >= MIN_FINGERS) {
+                val maxDist = callbacks.maxFingerDistance()
+                if (maxDist > 0 && hasOutlierFinger(maxDist)) {
+                    callbacks.log("-> WAITING rejected: finger too far from others (maxDist=$maxDist)")
+                    reset()
+                    return false
+                }
                 state = State.ACTIVE
                 callbacks.pilferPointers()
                 callbacks.log("-> ACTIVE (${pointers.size} fingers, pilfered)")
@@ -224,6 +234,29 @@ internal class MultiTouchGestureDetector(
         if (idx in e.pointers.indices) {
             pointers.remove(e.pointers[idx].id)
         }
+    }
+
+    /**
+     * Returns true if any pointer's start position is farther than [maxDist] from
+     * ALL other pointers — indicating an accidental spread (e.g. palm touch).
+     */
+    private fun hasOutlierFinger(maxDist: Int): Boolean {
+        if (pointers.size < 2) return false
+        val entries = pointers.values.toList()
+        val maxDistF = maxDist.toFloat()
+        for (i in entries.indices) {
+            val a = entries[i]
+            val farFromAll = entries.indices
+                .filter { it != i }
+                .all { j ->
+                    val b = entries[j]
+                    val dx = a.startX - b.startX
+                    val dy = a.startY - b.startY
+                    sqrt(dx * dx + dy * dy) > maxDistF
+                }
+            if (farFromAll) return true
+        }
+        return false
     }
 
     private fun syncPointers(e: PointerEvent, registerNew: Boolean) {

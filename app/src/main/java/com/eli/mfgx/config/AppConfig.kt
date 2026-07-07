@@ -58,4 +58,10 @@ object AppConfig {
 
     const val GESTURE_SWIPE_UP_OFFSET_Y = "gesture_swipe_up_offset_y"
     const val GESTURE_SWIPE_UP_OFFSET_Y_DEFAULT = 0
+
+    const val GESTURE_SWIPE_UP_Y_FACTOR = "gesture_swipe_up_y_factor"
+    const val GESTURE_SWIPE_UP_Y_FACTOR_DEFAULT = 1.25f
+
+    const val GESTURE_MAX_FINGER_DISTANCE = "gesture_max_finger_distance"
+    const val GESTURE_MAX_FINGER_DISTANCE_DEFAULT = 10000
 }

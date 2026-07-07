@@ -48,6 +48,8 @@ class MultiTouchGestureDetectorTest {
             virtualFinished = true
             lastCurrentX = currentX; lastCurrentY = currentY
         }
+        var maxFingerDistance = 10000
+        override fun maxFingerDistance() = maxFingerDistance
         override fun log(message: String) {}
     }
 
@@ -170,5 +172,30 @@ class MultiTouchGestureDetectorTest {
         d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
         d.handlePointerEvent(pUp(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 0))
         assertEquals(State.INACTIVE, d.currentState())
+    }
+
+    @Test fun threeFingersSpreadTooFarRejected() {
+        cb.maxFingerDistance = 500
+        // p0 and p1 are close (200px), p2 is far from both (600px from p0, 400px from p1)
+        // p2's min distance = 400px which is <= 500, so allowed — let's adjust
+        // Actually: p0(100,500), p1(300,500), p2(1200,500)
+        // p0→p1=200, p0→p2=1100, p1→p2=900
+        // p2 minDist = min(1100, 900) = 900 > 500 → rejected
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 300f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 300f, 500f), ptr(2, 1200f, 500f), idx = 2))
+        // Should be INACTIVE — rejected due to spread, no pilfer
+        assertEquals(State.INACTIVE, d.currentState())
+        assertFalse(cb.pilfered)
+    }
+
+    @Test fun threeFingersWithinDistanceAllowsActive() {
+        cb.maxFingerDistance = 500
+        // All fingers within 400px of each other
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 300f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 300f, 500f), ptr(2, 400f, 500f), idx = 2))
+        assertEquals(State.ACTIVE, d.currentState())
+        assertTrue(cb.pilfered)
     }
 }
