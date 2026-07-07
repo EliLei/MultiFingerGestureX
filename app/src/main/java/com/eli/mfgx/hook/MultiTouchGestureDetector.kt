@@ -36,12 +36,20 @@ internal class MultiTouchGestureDetector(
         /** Max allowed distance (px) between any finger and ALL others when entering ACTIVE.
          *  If any finger exceeds this from every other finger, the gesture is rejected. */
         fun maxFingerDistance(): Int
+        /** Whether 3-finger short-press back is enabled. */
+        fun threeFingerBack(): Boolean
+        /** Timeout (ms) from ACTIVE entry during which a short press triggers Back. */
+        fun backTimeoutMs(): Int
+        /** Trigger the Android Back action. */
+        fun performBack()
         fun log(message: String)
     }
 
     interface Timer {
         fun armTimeout(ms: Long)
         fun cancelTimeout()
+        fun armBackTimer(ms: Long)
+        fun cancelBackTimer()
     }
 
     data class PointerEvent(
@@ -64,6 +72,7 @@ internal class MultiTouchGestureDetector(
     private val pointers = LinkedHashMap<Int, PointerInfo>()
     private var state: State = State.INACTIVE
     private var newFingersAllowed: Boolean = true
+    private var backEnabled: Boolean = false
 
     // ---- public ----
 
@@ -96,11 +105,19 @@ internal class MultiTouchGestureDetector(
         }
     }
 
+    /** Called by Timer when back timeout fires — disables short-press back for this gesture. */
+    fun onBackTimeout() {
+        backEnabled = false
+        callbacks.log("back timeout — short-press back disabled")
+    }
+
     fun reset() {
         timer.cancelTimeout()
+        timer.cancelBackTimer()
         pointers.clear()
         state = State.INACTIVE
         newFingersAllowed = true
+        backEnabled = false
     }
 
     // test-only accessors
@@ -136,6 +153,10 @@ internal class MultiTouchGestureDetector(
                 callbacks.pilferPointers()
                 callbacks.log("-> ACTIVE (${pointers.size} fingers, pilfered)")
                 // Do NOT cancel timer
+                if (callbacks.threeFingerBack()) {
+                    backEnabled = true
+                    timer.armBackTimer(callbacks.backTimeoutMs().toLong())
+                }
             }
             return false // WAITING transparent
         }
@@ -198,7 +219,16 @@ internal class MultiTouchGestureDetector(
                 reset()
                 return true
             }
-            State.ACTIVE -> { reset(); return true }
+            State.ACTIVE -> {
+                if (backEnabled && allPointersWithinSmallThreshold()) {
+                    callbacks.performBack()
+                    callbacks.log("ACTIVE -> back (short press)")
+                    reset()
+                    return true
+                }
+                reset()
+                return true
+            }
             State.WAITING -> {
                 removeActionPointer(e)
                 if (pointers.isEmpty()) reset()
@@ -233,6 +263,16 @@ internal class MultiTouchGestureDetector(
         val idx = e.actionIndex
         if (idx in e.pointers.indices) {
             pointers.remove(e.pointers[idx].id)
+        }
+    }
+
+    /** Returns true if every tracked pointer's displacement is ≤ smallThreshold. */
+    private fun allPointersWithinSmallThreshold(): Boolean {
+        val small = callbacks.smallThreshold().toFloat()
+        return pointers.values.all {
+            val dx = it.currentX - it.startX
+            val dy = it.currentY - it.startY
+            sqrt(dx * dx + dy * dy) <= small
         }
     }
 

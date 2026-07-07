@@ -17,8 +17,12 @@ class MultiTouchGestureDetectorTest {
     private class FakeTimer : Timer {
         var armed: Long? = null
         var cancelled = false
+        var backArmed: Long? = null
+        var backCancelled = false
         override fun armTimeout(ms: Long) { armed = ms; cancelled = false }
         override fun cancelTimeout() { armed = null; cancelled = true }
+        override fun armBackTimer(ms: Long) { backArmed = ms; backCancelled = false }
+        override fun cancelBackTimer() { backArmed = null; backCancelled = true }
     }
 
     private class FakeCallbacks : Callbacks {
@@ -50,6 +54,12 @@ class MultiTouchGestureDetectorTest {
         }
         var maxFingerDistance = 10000
         override fun maxFingerDistance() = maxFingerDistance
+        var threeFingerBack = false
+        override fun threeFingerBack() = threeFingerBack
+        var backTimeoutMs = 300
+        override fun backTimeoutMs() = backTimeoutMs
+        var backPerformed = false
+        override fun performBack() { backPerformed = true }
         override fun log(message: String) {}
     }
 
@@ -197,5 +207,64 @@ class MultiTouchGestureDetectorTest {
         d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 300f, 500f), ptr(2, 400f, 500f), idx = 2))
         assertEquals(State.ACTIVE, d.currentState())
         assertTrue(cb.pilfered)
+    }
+
+    // ---- 3-finger back ----
+
+    @Test fun threeFingerShortPressTriggersBack() {
+        cb.threeFingerBack = true
+        // 3 fingers down at same position → ACTIVE with back timer armed
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
+        assertEquals(State.ACTIVE, d.currentState())
+        assertEquals(300L, timer.backArmed)
+        // lift one finger with no movement → back triggered
+        d.handlePointerEvent(pUp(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 0))
+        assertTrue(cb.backPerformed)
+        assertEquals(State.INACTIVE, d.currentState())
+    }
+
+    @Test fun threeFingerBackDisabledDoesNotTrigger() {
+        cb.threeFingerBack = false
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
+        assertEquals(State.ACTIVE, d.currentState())
+        assertNull(timer.backArmed)
+        // lift → no back, normal ACTIVE reset
+        d.handlePointerEvent(pUp(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 0))
+        assertFalse(cb.backPerformed)
+        assertEquals(State.INACTIVE, d.currentState())
+    }
+
+    @Test fun threeFingerBackTimeoutDisablesBack() {
+        cb.threeFingerBack = true
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
+        assertEquals(State.ACTIVE, d.currentState())
+        assertEquals(300L, timer.backArmed)
+        // back timeout fires
+        d.onBackTimeout()
+        // lift → no back
+        d.handlePointerEvent(pUp(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 0))
+        assertFalse(cb.backPerformed)
+        assertEquals(State.INACTIVE, d.currentState())
+    }
+
+    @Test fun threeFingerMovedPastThresholdNoBack() {
+        cb.threeFingerBack = true
+        d.handlePointerEvent(down(ptr(0, 100f, 500f)))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), idx = 1))
+        d.handlePointerEvent(pDown(ptr(0, 100f, 500f), ptr(1, 200f, 500f), ptr(2, 300f, 500f), idx = 2))
+        assertEquals(State.ACTIVE, d.currentState())
+        // MOVE past small threshold (12px) — each moves 15px
+        d.handlePointerEvent(move(
+            ptr(0, 100f, 515f), ptr(1, 200f, 515f), ptr(2, 300f, 515f)))
+        // This should be a gesture direction decision, not back
+        // But since direction is all-DOWN, it enters SWIPE_DOWN
+        assertEquals(State.SWIPE_DOWN, d.currentState())
+        assertFalse(cb.backPerformed)
     }
 }

@@ -25,6 +25,7 @@ Put three or more fingers on the screen and swipe:
 | Swipe Down | Screenshot |
 | Swipe Up | Home (fast) / Recents (slow) |
 | Swipe Left / Right | Switch to previous / next app |
+| Short Press (3-finger tap) | Back |
 
 ## Requirements
 
@@ -35,10 +36,11 @@ Put three or more fingers on the screen and swipe:
 
 ## Installation
 
-1. Install the APK.
-2. Enable the module in LSPosed and select the `android` scope.
-3. Reboot.
-4. Open the app to configure thresholds (optional — sensible defaults are set).
+1. Download the latest APK from [Releases](https://github.com/Xposed-Modules-Repo/com.eli.mfgx/releases).
+2. Install the APK.
+3. Enable the module in LSPosed and select the `android` scope.
+4. Reboot.
+5. Open the app to configure thresholds (optional — sensible defaults are set).
 
 ## Configuration
 
@@ -50,6 +52,10 @@ All settings are in the **Thresholds** screen:
 | Screenshot Threshold | 80 px | Minimum downward distance to trigger screenshot |
 | Waiting Timeout | 300 ms | Max wait time before locking the active pointer set |
 | Swipe-Up Y Offset | 0 px | Fine-tune the virtual touch position for SWIPE_UP |
+| Swipe-Up Y Factor | 1.25 | Multiplier for virtual cursor movement; >1 amplifies, <1 dampens |
+| Max Finger Distance | 10000 px | Reject gesture if any finger is too far from all others |
+| 3-Finger Back | off | Toggle to enable short-press back gesture |
+| Back Timeout | 300 ms | Time window after activation to recognize a short press as Back |
 
 ## Tested On
 

@@ -155,6 +155,10 @@
     <string name="desc_swipe_up_y_factor">虚拟底部光标移动距离相对于手指实际移动的倍率。大于1.0放大（更快），小于1.0缩小（更慢）。默认：1.25</string>
     <string name="label_max_finger_distance">最远手指距离</string>
     <string name="desc_max_finger_distance">当3指以上按下时，若某个手指与所有其他手指的距离均超过此值，则拒绝该手势。防止手掌误触或手指过于分散导致的意外触发。设为极大值（如10000）可禁用此限制。</string>
+    <string name="label_three_finger_back">三指返回</string>
+    <string name="desc_three_finger_back">启用后，三指按下后快速抬起（移动距离小于小阈值）将触发返回操作。手势必须在返回超时窗口内完成。</string>
+    <string name="label_back_timeout">返回超时</string>
+    <string name="desc_back_timeout">三指激活后识别短按返回的时间窗口。超出此窗口后，仅检测滑动手势。</string>
     <string name="hint_screen_size">屏幕尺寸：%1$s</string>
     <string name="tab_3_fingers">三指</string>
     <string name="tab_4_fingers">四指</string>

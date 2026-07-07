@@ -56,8 +56,9 @@ object GestureManager {
     private var virtualDownTime: Long = 0L
 
     private fun onGestureTimeout() { gestureDetector.onTimeout() }
+    private fun onBackTimeout() { gestureDetector.onBackTimeout() }
 
-    private val gestureTimer: HandlerTimer = HandlerTimer(mainHandler(), ::onGestureTimeout)
+    private val gestureTimer: HandlerTimer = HandlerTimer(mainHandler(), ::onGestureTimeout, ::onBackTimeout)
 
     private val gestureDetector: MultiTouchGestureDetector by lazy {
         MultiTouchGestureDetector(
@@ -114,6 +115,13 @@ object GestureManager {
                 }
                 override fun maxFingerDistance(): Int =
                     readInt(AppConfig.GESTURE_MAX_FINGER_DISTANCE, AppConfig.GESTURE_MAX_FINGER_DISTANCE_DEFAULT)
+                override fun threeFingerBack(): Boolean =
+                    readBool(AppConfig.GESTURE_THREE_FINGER_BACK)
+                override fun backTimeoutMs(): Int =
+                    readInt(AppConfig.GESTURE_BACK_TIMEOUT_MS, AppConfig.GESTURE_BACK_TIMEOUT_MS_DEFAULT)
+                override fun performBack() {
+                    systemContext?.let { mainHandler().post { actionDispatcher.executeKeyAction("back", it) } }
+                }
                 override fun log(message: String) = this@GestureManager.log("[Gesture] $message")
             },
             timer = gestureTimer,
@@ -125,6 +133,9 @@ object GestureManager {
 
     private fun readFloat(key: String, default: Float): Float =
         configRepository.get(key, default.toString()).toFloatOrNull() ?: default
+
+    private fun readBool(key: String): Boolean =
+        configRepository.get(key, "false").toBooleanStrictOrNull() ?: false
 
     /** SWIPE_UP virtual Y offset in pixels. Positive = push gesture downward, negative = pull upward. */
     private fun swipeUpOffsetY(): Float =
@@ -332,8 +343,10 @@ object GestureManager {
     private class HandlerTimer(
         handler: Handler,
         private val onFire: () -> Unit,
+        private val onBackFire: () -> Unit,
     ) : MultiTouchGestureDetector.Timer {
         private val runnable = Runnable { onFire() }
+        private val backRunnable = Runnable { onBackFire() }
         private val handlerRef = handler
         override fun armTimeout(ms: Long) {
             handlerRef.removeCallbacks(runnable)
@@ -341,6 +354,13 @@ object GestureManager {
         }
         override fun cancelTimeout() {
             handlerRef.removeCallbacks(runnable)
+        }
+        override fun armBackTimer(ms: Long) {
+            handlerRef.removeCallbacks(backRunnable)
+            handlerRef.postDelayed(backRunnable, ms)
+        }
+        override fun cancelBackTimer() {
+            handlerRef.removeCallbacks(backRunnable)
         }
     }
 }

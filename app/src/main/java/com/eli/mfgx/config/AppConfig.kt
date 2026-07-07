@@ -64,4 +64,10 @@ object AppConfig {
 
     const val GESTURE_MAX_FINGER_DISTANCE = "gesture_max_finger_distance"
     const val GESTURE_MAX_FINGER_DISTANCE_DEFAULT = 10000
+
+    const val GESTURE_THREE_FINGER_BACK = "gesture_three_finger_back"
+    const val GESTURE_THREE_FINGER_BACK_DEFAULT = false
+
+    const val GESTURE_BACK_TIMEOUT_MS = "gesture_back_timeout_ms"
+    const val GESTURE_BACK_TIMEOUT_MS_DEFAULT = 300
 }

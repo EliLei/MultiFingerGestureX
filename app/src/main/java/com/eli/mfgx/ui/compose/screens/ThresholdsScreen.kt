@@ -27,8 +27,11 @@ import androidx.compose.ui.unit.dp
 import com.eli.mfgx.R
 import com.eli.mfgx.config.AppConfig
 import com.eli.mfgx.config.configPrefs
+import com.eli.mfgx.config.getConfigBool
 import com.eli.mfgx.config.putConfig
+import com.eli.mfgx.ui.compose.components.EdgeXDivider
 import com.eli.mfgx.ui.compose.components.EdgeXListGroup
+import com.eli.mfgx.ui.compose.components.EdgeXSwitch
 import com.eli.mfgx.ui.compose.components.EdgeXTopBar
 import com.eli.mfgx.ui.compose.theme.LocalEdgeXColors
 
@@ -116,6 +119,19 @@ fun ThresholdsScreen(onBack: () -> Unit) {
                     )
                 },
             )
+            EdgeXDivider()
+            // ---- 3-Finger Back ----
+            BackToggleRow(context, prefs, colors)
+            ThresholdRow(
+                context, prefs,
+                AppConfig.GESTURE_BACK_TIMEOUT_MS,
+                AppConfig.GESTURE_BACK_TIMEOUT_MS_DEFAULT.toString(),
+                labelRes = R.string.label_back_timeout,
+                descRes = R.string.desc_back_timeout,
+                unit = "ms",
+                isDecimal = false,
+                colors = colors,
+            )
         }
         Spacer(modifier = Modifier.height(28.dp))
     }
@@ -183,5 +199,38 @@ private fun ThresholdRow(
             ),
         )
         footer?.invoke()
+    }
+}
+
+@Composable
+private fun BackToggleRow(
+    context: android.content.Context,
+    prefs: android.content.SharedPreferences,
+    colors: com.eli.mfgx.ui.compose.theme.EdgeXColors,
+) {
+    val key = AppConfig.GESTURE_THREE_FINGER_BACK
+    var checked by remember {
+        mutableStateOf(context.getConfigBool(key))
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Text(
+            text = stringResource(R.string.label_three_finger_back),
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.desc_three_finger_back),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceDim,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        EdgeXSwitch(
+            checked = checked,
+            onCheckedChange = { enabled ->
+                checked = enabled
+                context.putConfig(key, enabled)
+            },
+        )
     }
 }

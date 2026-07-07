@@ -163,6 +163,10 @@
     <string name="desc_swipe_up_y_factor">Multiplier for how far the virtual bottom-edge cursor moves relative to your fingers. Values above 1.0 amplify movement (faster), below 1.0 dampen it (slower). Default: 1.25</string>
     <string name="label_max_finger_distance">Max Finger Distance</string>
     <string name="desc_max_finger_distance">Reject gesture if any finger is farther than this from ALL other fingers when 3+ fingers touch down. Prevents accidental activation from spread-out fingers or palms. Set to a very large value (e.g., 10000) to disable.</string>
+    <string name="label_three_finger_back">3-Finger Back</string>
+    <string name="desc_three_finger_back">When enabled, lifting a finger quickly after a 3-finger touch (before moving past the small threshold) triggers the Back action. The gesture must complete within the back timeout window.</string>
+    <string name="label_back_timeout">Back Timeout</string>
+    <string name="desc_back_timeout">Time window after 3-finger activation during which a short press (lift with minimal movement) is recognized as Back. After this window, only swipe gestures are detected.</string>
     <string name="hint_screen_size">Screen size: %1$s</string>
     <string name="label_lift_before_cancel">Lift before cancel</string>
     <string name="desc_lift_before_cancel">Inject off-screen lift sequence before ACTION_CANCEL when multi-touch gesture activates. Disable to cancel first, then lift.</string>
