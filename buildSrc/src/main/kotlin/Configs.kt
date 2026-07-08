@@ -7,8 +7,8 @@ object Configs {
 
     const val namespace = "com.eli.mfgx"
     const val applicationId = "com.eli.mfgx"
-    const val versionCode = 234
-    const val versionName = "0.2.34"
+    const val versionCode = 237
+    const val versionName = "0.2.37"
 
     val javaVersion = JavaVersion.VERSION_11
     const val jvmTarget = "11"
