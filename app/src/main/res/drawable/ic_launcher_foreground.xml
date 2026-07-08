@@ -10,8 +10,8 @@
         android:name="hand"
         android:scaleX="2.5"
         android:scaleY="2.5"
-        android:translateX="26"
-        android:translateY="23">
+        android:translateX="24"
+        android:translateY="19">
 
         <path
             android:strokeColor="#FFFFFF"

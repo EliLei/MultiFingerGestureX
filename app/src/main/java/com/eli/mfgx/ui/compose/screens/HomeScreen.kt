@@ -66,6 +66,7 @@ data class HomeCallbacks(
     val setHaptic: (Boolean) -> Unit,
     val setHapticType: (String) -> Unit,
     val setArcDrawer: (Boolean) -> Unit,
+    val setXiaobuMemoryEnabled: (Boolean) -> Unit,
 )
 
 private data class HapticFeedbackType(
@@ -298,6 +299,17 @@ private fun AdvancedSettings(state: HomeUiState, callbacks: HomeCallbacks) {
                         showHapticTypeSheet = true
                     }
                 },
+            )
+        }
+        EdgeXDivider()
+        EdgeXRow(
+            title = stringResource(R.string.menu_xiaobu_memory),
+            icon = EdgeXIcons.Settings,
+            onClick = { callbacks.setXiaobuMemoryEnabled(!state.xiaobuMemoryEnabled) },
+        ) {
+            EdgeXSwitch(
+                checked = state.xiaobuMemoryEnabled,
+                onCheckedChange = { callbacks.setXiaobuMemoryEnabled(it) },
             )
         }
         EdgeXDivider()

@@ -70,4 +70,7 @@ object AppConfig {
 
     const val GESTURE_BACK_TIMEOUT_MS = "gesture_back_timeout_ms"
     const val GESTURE_BACK_TIMEOUT_MS_DEFAULT = 300
+
+    // OPPO-specific
+    const val OPPO_XIAOBU_MEMORY_ENABLED = "oppo_xiaobu_memory_enabled"
 }

@@ -67,6 +67,7 @@ data class HomeUiState(
     val moduleActive: Boolean,
     val accent: EdgeXAccent,
     val darkMode: Boolean,
+    val xiaobuMemoryEnabled: Boolean,
 )
 
 @Composable
@@ -165,6 +166,10 @@ fun EdgeXApp() {
                             },
                             setArcDrawer = {
                                 // No longer applicable
+                            },
+                            setXiaobuMemoryEnabled = {
+                                setXiaobuMemoryEnabled(it)
+                                refresh()
                             },
                         ),
                     )
@@ -279,4 +284,24 @@ private fun Context.readHomeUiState(): HomeUiState =
                         android.content.res.Configuration.UI_MODE_NIGHT_YES)
             }
         },
+        xiaobuMemoryEnabled = readXiaobuMemoryEnabled(),
     )
+
+private fun readXiaobuMemoryEnabled(): Boolean {
+    return runCatching {
+        val result = Shell.cmd("settings get secure three_finger_flash_memory_enable").exec()
+        if (result.isSuccess) {
+            val output = result.out.joinToString("").trim()
+            // Default: if unset or "1", xiaobu memory is enabled; "0" means disabled
+            output != "0"
+        } else true
+    }.getOrDefault(true)
+}
+
+private fun setXiaobuMemoryEnabled(enabled: Boolean) {
+    Thread {
+        val value = if (enabled) "1" else "0"
+        Shell.cmd("settings put secure three_finger_flash_memory_enable $value").exec()
+    }.start()
+}
+
