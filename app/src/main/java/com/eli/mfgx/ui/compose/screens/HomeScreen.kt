@@ -304,6 +304,7 @@ private fun AdvancedSettings(state: HomeUiState, callbacks: HomeCallbacks) {
         EdgeXDivider()
         EdgeXRow(
             title = stringResource(R.string.menu_xiaobu_memory),
+            subtitle = stringResource(R.string.menu_xiaobu_memory_desc),
             icon = EdgeXIcons.Settings,
             onClick = { callbacks.setXiaobuMemoryEnabled(!state.xiaobuMemoryEnabled) },
         ) {

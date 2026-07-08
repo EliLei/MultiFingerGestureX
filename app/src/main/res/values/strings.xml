@@ -24,6 +24,7 @@
     <string name="menu_fluid_effect_desc">Elastic edge gesture feedback</string>
     <string name="menu_advanced">Advanced Options</string>
     <string name="menu_xiaobu_memory">Enable \"Xiaobu Memory\" gesture (OPPO only)</string>
+    <string name="menu_xiaobu_memory_desc">Seems no longer working</string>
     <string name="menu_arc_drawer">Enable Arc Freezer</string>
     <string name="menu_arc_drawer_desc">Display app list in arc on right side</string>
     <string name="menu_haptic_feedback">Haptic Feedback</string>
